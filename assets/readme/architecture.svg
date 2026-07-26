@@ -1,5 +1,5 @@
-<svg width="100%" viewBox="0 0 1200 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Fluxo: hook do Claude Code chama needle hook, que envia HTTP local, grava no SQLite e atualiza bandeja e painel">
-  <title>Fluxo de dados do Needle: hook do Claude Code até bandeja e painel</title>
+<svg width="100%" viewBox="0 0 1200 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Flow: Claude Code hook calls the Needle hook, which sends a local HTTP request, writes to SQLite, and updates the tray and panel">
+  <title>Needle data flow: from Claude Code hook to tray and panel</title>
   <defs>
     <style>
       .caption { font: 600 14px ui-monospace, SFMono-Regular, Consolas, monospace; fill: #7c828d; letter-spacing: 2px; }
@@ -12,20 +12,20 @@
     </marker>
   </defs>
 
-  <text x="20" y="24" class="caption">COMO FUNCIONA</text>
+  <text x="20" y="24" class="caption">HOW IT WORKS</text>
 
-  <!-- 5 caixas conectadas -->
+  <!-- Connected boxes -->
   <g>
     <rect x="0" y="60" width="200" height="90" rx="12" fill="#12151b" stroke="#ffffff" stroke-opacity="0.1"/>
     <text x="100" y="100" text-anchor="middle" class="box-title">Claude Code</text>
-    <text x="100" y="122" text-anchor="middle" class="box-file">evento de hook</text>
+    <text x="100" y="122" text-anchor="middle" class="box-file">Hook event</text>
   </g>
 
   <path d="M210,105 H260" class="arrow" marker-end="url(#arrowhead)"/>
 
   <g>
     <rect x="270" y="60" width="200" height="90" rx="12" fill="#12151b" stroke="#ffffff" stroke-opacity="0.1"/>
-    <text x="370" y="100" text-anchor="middle" class="box-title">needle hook</text>
+    <text x="370" y="100" text-anchor="middle" class="box-title">Needle Hook</text>
     <text x="370" y="122" text-anchor="middle" class="box-file">hookmode.rs</text>
   </g>
 
@@ -33,7 +33,7 @@
 
   <g>
     <rect x="540" y="60" width="200" height="90" rx="12" fill="#12151b" stroke="#ffffff" stroke-opacity="0.1"/>
-    <text x="640" y="100" text-anchor="middle" class="box-title">HTTP local</text>
+    <text x="640" y="100" text-anchor="middle" class="box-title">Local HTTP</text>
     <text x="640" y="122" text-anchor="middle" class="box-file">server.rs :47812</text>
   </g>
 
@@ -53,10 +53,10 @@
 
   <g>
     <rect x="1050" y="60" width="150" height="90" rx="12" fill="#12151b" stroke="#3b82f6" stroke-opacity="0.5"/>
-    <text x="1125" y="94" text-anchor="middle" class="box-title">Bandeja</text>
-    <text x="1125" y="114" text-anchor="middle" class="box-title">+ painel</text>
+    <text x="1125" y="94" text-anchor="middle" class="box-title">System Tray</text>
+    <text x="1125" y="114" text-anchor="middle" class="box-title">+ Panel</text>
     <text x="1125" y="136" text-anchor="middle" class="box-file">tray.rs · Vue</text>
   </g>
 
-  <text x="600" y="200" text-anchor="middle" class="box-file">Sem Node, sem runtime externo — o próprio binário instalado atende o hook.</text>
+  <text x="600" y="200" text-anchor="middle" class="box-file">No Node.js or external runtime — the installed binary serves the hook directly.</text>
 </svg>
