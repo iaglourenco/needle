@@ -16,7 +16,7 @@
 
   <text x="60" y="196" class="title">Needle</text>
 
-  <text x="64" y="248" All your Claude Code sessions, at a glance.</text>
+  <text x="64" y="248">All your Claude Code sessions, at a glance.</text>
   <text x="64" y="280" class="subtagline">Native Claude Code hooks + system tray. No terminal required.</text>
 
   <!-- Status legend: same colors used in SessionItem.vue -->
