@@ -1,5 +1,5 @@
-<svg width="100%" viewBox="0 0 1200 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Needle — monitor de sessões Claude Code na bandeja, com legenda de estados por cor">
-  <title>Needle — monitor de sessões Claude Code na bandeja</title>
+<svg width="100%" viewBox="0 0 1200 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Needle — Claude Code session monitor">
+  <title>Needle — Claude Code session monitor in the system tray</title>
   <defs>
     <style>
       .eyebrow { font: 600 15px ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: 3px; fill: #7c828d; }
@@ -16,24 +16,24 @@
 
   <text x="60" y="196" class="title">Needle</text>
 
-  <text x="64" y="248" class="tagline">O estado das suas sessões, num só olhar.</text>
-  <text x="64" y="280" class="subtagline">Hooks nativos do Claude Code + bandeja do sistema. Sem abrir nenhum terminal.</text>
+  <text x="64" y="248" All your Claude Code sessions, at a glance.</text>
+  <text x="64" y="280" class="subtagline">Native Claude Code hooks + system tray. No terminal required.</text>
 
-  <!-- legenda de estados: mesmas cores usadas de verdade em SessionItem.vue -->
+  <!-- Status legend: same colors used in SessionItem.vue -->
   <g transform="translate(64,336)">
     <circle cx="8" cy="-5" r="7" fill="#3b82f6"/>
-    <text x="24" y="0" class="legend">RODANDO</text>
+    <text x="24" y="0" class="legend">RUNNING</text>
 
     <circle cx="188" cy="-5" r="7" fill="#eab308"/>
-    <text x="204" y="0" class="legend">AGUARDANDO</text>
+    <text x="204" y="0" class="legend">WAITING</text>
 
     <circle cx="418" cy="-5" r="7" fill="#ef4444"/>
-    <text x="434" y="0" class="legend">ATENÇÃO / ERRO</text>
+    <text x="434" y="0" class="legend">ATTENTION / ERROR</text>
 
     <circle cx="672" cy="-5" r="7" fill="#22c55e"/>
-    <text x="688" y="0" class="legend">OCIOSA</text>
+    <text x="688" y="0" class="legend">IDLE</text>
 
     <circle cx="852" cy="-5" r="7" fill="#6b7280"/>
-    <text x="868" y="0" class="legend">OBSOLETA</text>
+    <text x="868" y="0" class="legend">STALE</text>
   </g>
 </svg>
