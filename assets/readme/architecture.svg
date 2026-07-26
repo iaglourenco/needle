@@ -1,0 +1,62 @@
+<svg width="100%" viewBox="0 0 1200 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Fluxo: hook do Claude Code chama needle hook, que envia HTTP local, grava no SQLite e atualiza bandeja e painel">
+  <title>Fluxo de dados do Needle: hook do Claude Code até bandeja e painel</title>
+  <defs>
+    <style>
+      .caption { font: 600 14px ui-monospace, SFMono-Regular, Consolas, monospace; fill: #7c828d; letter-spacing: 2px; }
+      .box-title { font: 700 16px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #eef0f3; }
+      .box-file { font: 500 12px ui-monospace, SFMono-Regular, Consolas, monospace; fill: #7c828d; }
+      .arrow { stroke: #3b82f6; stroke-width: 2; fill: none; }
+    </style>
+    <marker id="arrowhead" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#3b82f6"/>
+    </marker>
+  </defs>
+
+  <text x="20" y="24" class="caption">COMO FUNCIONA</text>
+
+  <!-- 5 caixas conectadas -->
+  <g>
+    <rect x="0" y="60" width="200" height="90" rx="12" fill="#12151b" stroke="#ffffff" stroke-opacity="0.1"/>
+    <text x="100" y="100" text-anchor="middle" class="box-title">Claude Code</text>
+    <text x="100" y="122" text-anchor="middle" class="box-file">evento de hook</text>
+  </g>
+
+  <path d="M210,105 H260" class="arrow" marker-end="url(#arrowhead)"/>
+
+  <g>
+    <rect x="270" y="60" width="200" height="90" rx="12" fill="#12151b" stroke="#ffffff" stroke-opacity="0.1"/>
+    <text x="370" y="100" text-anchor="middle" class="box-title">needle hook</text>
+    <text x="370" y="122" text-anchor="middle" class="box-file">hookmode.rs</text>
+  </g>
+
+  <path d="M480,105 H530" class="arrow" marker-end="url(#arrowhead)"/>
+
+  <g>
+    <rect x="540" y="60" width="200" height="90" rx="12" fill="#12151b" stroke="#ffffff" stroke-opacity="0.1"/>
+    <text x="640" y="100" text-anchor="middle" class="box-title">HTTP local</text>
+    <text x="640" y="122" text-anchor="middle" class="box-file">server.rs :47812</text>
+  </g>
+
+  <path d="M750,105 H800" class="arrow" marker-end="url(#arrowhead)"/>
+
+  <g>
+    <rect x="810" y="60" width="180" height="90" rx="12" fill="#12151b" stroke="#ffffff" stroke-opacity="0.1"/>
+    <text x="900" y="100" text-anchor="middle" class="box-title">SQLite</text>
+    <text x="900" y="122" text-anchor="middle" class="box-file">db.rs</text>
+  </g>
+
+  <path d="M1000,105 H1050" class="arrow" marker-end="url(#arrowhead)"/>
+
+  <g>
+    <rect x="1000" y="60" width="0" height="0"/>
+  </g>
+
+  <g>
+    <rect x="1050" y="60" width="150" height="90" rx="12" fill="#12151b" stroke="#3b82f6" stroke-opacity="0.5"/>
+    <text x="1125" y="94" text-anchor="middle" class="box-title">Bandeja</text>
+    <text x="1125" y="114" text-anchor="middle" class="box-title">+ painel</text>
+    <text x="1125" y="136" text-anchor="middle" class="box-file">tray.rs · Vue</text>
+  </g>
+
+  <text x="600" y="200" text-anchor="middle" class="box-file">Sem Node, sem runtime externo — o próprio binário instalado atende o hook.</text>
+</svg>

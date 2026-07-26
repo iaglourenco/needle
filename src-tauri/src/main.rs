@@ -1,0 +1,357 @@
+// Previne uma janela de console extra no Windows em modo release.
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
+mod db;
+mod hookmode;
+mod selfconfig;
+mod server;
+mod settings;
+mod state;
+mod tray;
+
+use rusqlite::Connection;
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
+use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
+use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
+use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, WebviewWindow, WindowEvent};
+use tauri_plugin_autostart::ManagerExt;
+
+const DEFAULT_PORT: u16 = 47812;
+const CLEANUP_INTERVAL_SECS: u64 = 60;
+
+pub struct AppState {
+    pub conn: Mutex<Connection>,
+    pub settings: Mutex<settings::Settings>,
+    pub data_dir: PathBuf,
+    pub app_handle: AppHandle,
+}
+
+fn needle_dir() -> PathBuf {
+    std::env::temp_dir().join("needle")
+}
+
+fn db_path(app: &AppHandle) -> PathBuf {
+    app.path()
+        .app_local_data_dir()
+        .expect("app_local_data_dir indisponível")
+}
+
+/// Sobe um listener TCP na porta padrão, tentando as próximas se ocupada, e
+/// grava a porta escolhida num arquivo conhecido pro modo hook ler.
+fn bind_available_port() -> (std::net::TcpListener, u16) {
+    for offset in 0..20u16 {
+        let port = DEFAULT_PORT + offset;
+        let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), port);
+        if let Ok(listener) = std::net::TcpListener::bind(addr) {
+            return (listener, port);
+        }
+    }
+    panic!("nenhuma porta disponível pro servidor local do Needle");
+}
+
+fn write_port_file(port: u16) {
+    let dir = needle_dir();
+    let _ = std::fs::create_dir_all(&dir);
+    let _ = std::fs::write(dir.join("port"), port.to_string());
+}
+
+/// Posiciona a janela colada no ícone da bandeja (assumindo o padrão mais
+/// comum no Windows: barra de tarefas embaixo, área de notificação à
+/// direita) em vez de deixar o SO centralizar a janela na tela.
+fn position_near_tray(window: &WebviewWindow, click_pos: PhysicalPosition<f64>) {
+    if let Ok(size) = window.outer_size() {
+        const MARGIN: f64 = 8.0;
+        let x = (click_pos.x - size.width as f64).max(0.0);
+        let y = (click_pos.y - size.height as f64 - MARGIN).max(0.0);
+        let _ = window.set_position(PhysicalPosition::new(x, y));
+    }
+}
+
+fn show_near_tray(window: &WebviewWindow, click_pos: PhysicalPosition<f64>) {
+    position_near_tray(window, click_pos);
+    let _ = window.show();
+    let _ = window.set_focus();
+}
+
+fn spawn_cleanup_job(app_state: Arc<AppState>) {
+    tauri::async_runtime::spawn(async move {
+        let mut interval =
+            tokio::time::interval(std::time::Duration::from_secs(CLEANUP_INTERVAL_SECS));
+        loop {
+            interval.tick().await;
+            let now = chrono::Utc::now().timestamp();
+            let (waiting_timeout, stale_timeout) = {
+                let settings = app_state.settings.lock().unwrap();
+                (settings.waiting_timeout_secs, settings.stale_timeout_secs)
+            };
+
+            let conn = app_state.conn.lock().unwrap();
+            let sessions = db::list_sessions(&conn).unwrap_or_default();
+            for session in &sessions {
+                let seconds_since = now - session.last_event_at;
+                let after_waiting =
+                    state::apply_waiting_timeout(session.state, seconds_since, waiting_timeout);
+                let after_stale =
+                    state::apply_stale_timeout(after_waiting, seconds_since, stale_timeout);
+                if after_stale != session.state {
+                    let _ = db::set_session_state(&conn, &session.session_id, after_stale);
+                }
+            }
+            db::delete_ended_sessions(&conn).ok();
+            drop(conn);
+
+            tray::refresh_from_db(&app_state);
+        }
+    });
+}
+
+fn main() {
+    // O Needle é chamado pelo próprio Claude Code como `needle hook`, sem
+    // GUI: lê o evento do stdin, repassa pro app rodando e sai. Isso evita
+    // depender de Node ou de qualquer runtime externo pro hook funcionar.
+    if std::env::args().nth(1).as_deref() == Some("hook") {
+        hookmode::run();
+        return;
+    }
+
+    // Chamado pelo hook NSIS_HOOK_PREUNINSTALL antes do desinstalador
+    // apagar o executável: remove as entradas do Needle de
+    // ~/.claude/settings.json pra não deixar hook morto configurado.
+    if std::env::args().nth(1).as_deref() == Some("remove-hooks") {
+        let _ = selfconfig::remove_hooks();
+        return;
+    }
+
+    tauri::Builder::default()
+        // Precisa ser o primeiro plugin: se o Needle já estiver rodando,
+        // uma segunda tentativa de abrir só foca a janela existente em vez
+        // de criar um segundo processo (e um segundo ícone na bandeja).
+        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.show();
+                let _ = window.set_focus();
+            }
+        }))
+        .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            None,
+        ))
+        .setup(|app| {
+            let handle = app.handle().clone();
+            let data_dir = db_path(&handle);
+            std::fs::create_dir_all(&data_dir).expect("falha criando diretório de dados");
+            let conn = db::open(&data_dir.join("needle.sqlite")).expect("falha abrindo SQLite");
+            let loaded_settings = settings::load(&data_dir);
+
+            let app_state = Arc::new(AppState {
+                conn: Mutex::new(conn),
+                settings: Mutex::new(loaded_settings),
+                data_dir: data_dir.clone(),
+                app_handle: handle.clone(),
+            });
+            app.manage(app_state.clone());
+
+            if loaded_settings.autostart {
+                let _ = handle.autolaunch().enable();
+            }
+
+            let (listener, port) = bind_available_port();
+            write_port_file(port);
+            listener
+                .set_nonblocking(true)
+                .expect("falha configurando listener non-blocking");
+
+            let router_state = app_state.clone();
+            tauri::async_runtime::spawn(async move {
+                let listener = tokio::net::TcpListener::from_std(listener)
+                    .expect("falha convertendo listener pro runtime async");
+                axum::serve(listener, server::router(router_state))
+                    .await
+                    .expect("servidor HTTP do Needle caiu");
+            });
+
+            spawn_cleanup_job(app_state.clone());
+
+            // Auto-configuração: registra o próprio executável como hook do
+            // Claude Code em ~/.claude/settings.json. Idempotente — corrige
+            // o caminho sozinho se o app for movido ou atualizado.
+            if let Ok(exe_path) = std::env::current_exe() {
+                let exe_path = exe_path.display().to_string();
+                match selfconfig::ensure_hooks_registered(&exe_path) {
+                    Ok(true) => {
+                        use tauri_plugin_notification::NotificationExt;
+                        let _ = handle
+                            .notification()
+                            .builder()
+                            .title("Needle configurado")
+                            .body("Hooks do Claude Code registrados automaticamente.")
+                            .show();
+                    }
+                    Ok(false) => {}
+                    Err(err) => eprintln!("falha ao auto-configurar hooks: {err}"),
+                }
+            }
+
+            let open_item = MenuItem::with_id(app, "open", "Abrir Needle", true, None::<&str>)?;
+            let settings_item =
+                MenuItem::with_id(app, "settings", "Configurações", true, None::<&str>)?;
+            let reconfigure_item = MenuItem::with_id(
+                app,
+                "reconfigure",
+                "Reconfigurar hooks",
+                true,
+                None::<&str>,
+            )?;
+            let separator = PredefinedMenuItem::separator(app)?;
+            let quit_item = MenuItem::with_id(app, "quit", "Sair", true, None::<&str>)?;
+            let menu = Menu::with_items(
+                app,
+                &[
+                    &open_item,
+                    &settings_item,
+                    &reconfigure_item,
+                    &separator,
+                    &quit_item,
+                ],
+            )?;
+
+            let window = app.get_webview_window("main").unwrap();
+            let window_for_click = window.clone();
+            let window_for_open = window.clone();
+            let window_for_settings = window.clone();
+            let window_for_blur = window.clone();
+            let handle_for_reconfigure = handle.clone();
+
+            // Guarda a última posição conhecida do ícone da bandeja, pra
+            // itens de menu (que não recebem coordenadas de clique) também
+            // conseguirem abrir a janela colada nela.
+            let last_tray_pos = Arc::new(Mutex::new(PhysicalPosition::new(0.0, 0.0)));
+            let last_tray_pos_for_event = last_tray_pos.clone();
+
+            // Fecha a janela quando ela perde o foco, como um popover normal
+            // de bandeja — evita a sensação de janela "perdida" no meio da
+            // tela depois de clicar em outro lugar.
+            window.on_window_event(move |event| {
+                if let WindowEvent::Focused(false) = event {
+                    let _ = window_for_blur.hide();
+                }
+            });
+
+            TrayIconBuilder::with_id(tray::TRAY_ID)
+                .icon(app.default_window_icon().unwrap().clone())
+                .menu(&menu)
+                .tooltip("Needle")
+                .on_menu_event(move |app, event| {
+                    let pos = *last_tray_pos.lock().unwrap();
+                    match event.id.as_ref() {
+                        "quit" => app.exit(0),
+                        "open" => {
+                            show_near_tray(&window_for_open, pos);
+                            let _ = window_for_open.emit("show-view", "sessions");
+                        }
+                        "settings" => {
+                            show_near_tray(&window_for_settings, pos);
+                            let _ = window_for_settings.emit("show-view", "settings");
+                        }
+                        "reconfigure" => {
+                            if let Ok(exe_path) = std::env::current_exe() {
+                                let exe_path = exe_path.display().to_string();
+                                let _ = selfconfig::ensure_hooks_registered(&exe_path);
+                            }
+                            use tauri_plugin_notification::NotificationExt;
+                            let _ = handle_for_reconfigure
+                                .notification()
+                                .builder()
+                                .title("Needle")
+                                .body("Hooks reconfigurados.")
+                                .show();
+                        }
+                        _ => {}
+                    }
+                })
+                .on_tray_icon_event(move |_tray, event| match event {
+                    // Um clique físico dispara Down e depois Up; reagir só
+                    // ao Up evita abrir-e-fechar a janela no mesmo clique.
+                    // Sempre mostra (em vez de alternar): perder o foco já
+                    // esconde a janela (ver on_window_event acima), então um
+                    // toggle aqui entraria em corrida com o hide do blur.
+                    TrayIconEvent::Click {
+                        button: MouseButton::Left,
+                        button_state: MouseButtonState::Up,
+                        position,
+                        ..
+                    } => {
+                        *last_tray_pos_for_event.lock().unwrap() = position;
+                        show_near_tray(&window_for_click, position);
+                    }
+                    TrayIconEvent::Enter { position, .. } => {
+                        *last_tray_pos_for_event.lock().unwrap() = position;
+                    }
+                    _ => {}
+                })
+                .build(app)?;
+
+            Ok(())
+        })
+        .invoke_handler(tauri::generate_handler![
+            list_sessions,
+            get_settings,
+            save_settings,
+            get_hook_status,
+            reconfigure_hooks,
+            remove_hooks_command,
+        ])
+        .run(tauri::generate_context!())
+        .expect("erro ao rodar app Needle");
+}
+
+#[tauri::command]
+fn list_sessions(state: tauri::State<Arc<AppState>>) -> Vec<db::SessionRow> {
+    let conn = state.conn.lock().unwrap();
+    db::list_sessions(&conn).unwrap_or_default()
+}
+
+#[tauri::command]
+fn get_settings(state: tauri::State<Arc<AppState>>) -> settings::Settings {
+    *state.settings.lock().unwrap()
+}
+
+#[tauri::command]
+fn save_settings(
+    app: AppHandle,
+    state: tauri::State<Arc<AppState>>,
+    new_settings: settings::Settings,
+) -> Result<(), String> {
+    settings::save(&state.data_dir, &new_settings).map_err(|e| e.to_string())?;
+    *state.settings.lock().unwrap() = new_settings;
+
+    let autolaunch = app.autolaunch();
+    let result = if new_settings.autostart {
+        autolaunch.enable()
+    } else {
+        autolaunch.disable()
+    };
+    result.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn get_hook_status() -> selfconfig::HookStatus {
+    let exe_path = std::env::current_exe()
+        .map(|p| p.display().to_string())
+        .unwrap_or_default();
+    selfconfig::status(&exe_path)
+}
+
+#[tauri::command]
+fn reconfigure_hooks() -> Result<bool, String> {
+    let exe_path = std::env::current_exe().map_err(|e| e.to_string())?;
+    selfconfig::ensure_hooks_registered(&exe_path.display().to_string()).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn remove_hooks_command() -> Result<bool, String> {
+    selfconfig::remove_hooks().map_err(|e| e.to_string())
+}

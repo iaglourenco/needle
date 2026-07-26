@@ -1,0 +1,39 @@
+<svg width="100%" viewBox="0 0 1200 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Needle — monitor de sessões Claude Code na bandeja, com legenda de estados por cor">
+  <title>Needle — monitor de sessões Claude Code na bandeja</title>
+  <defs>
+    <style>
+      .eyebrow { font: 600 15px ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: 3px; fill: #7c828d; }
+      .title { font: 700 108px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #eef0f3; }
+      .tagline { font: 400 29px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #c7cad1; }
+      .subtagline { font: 400 19px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #82868f; }
+      .legend { font: 500 15px ui-monospace, SFMono-Regular, Consolas, monospace; fill: #aeb2ba; }
+    </style>
+  </defs>
+
+  <rect x="1" y="1" width="1198" height="398" rx="22" fill="#0b0e13" stroke="#ffffff" stroke-opacity="0.08"/>
+
+  <text x="64" y="70" class="eyebrow">TRAY MONITOR · CLAUDE CODE SESSIONS</text>
+
+  <text x="60" y="196" class="title">Needle</text>
+
+  <text x="64" y="248" class="tagline">O estado das suas sessões, num só olhar.</text>
+  <text x="64" y="280" class="subtagline">Hooks nativos do Claude Code + bandeja do sistema. Sem abrir nenhum terminal.</text>
+
+  <!-- legenda de estados: mesmas cores usadas de verdade em SessionItem.vue -->
+  <g transform="translate(64,336)">
+    <circle cx="8" cy="-5" r="7" fill="#3b82f6"/>
+    <text x="24" y="0" class="legend">RODANDO</text>
+
+    <circle cx="188" cy="-5" r="7" fill="#eab308"/>
+    <text x="204" y="0" class="legend">AGUARDANDO</text>
+
+    <circle cx="418" cy="-5" r="7" fill="#ef4444"/>
+    <text x="434" y="0" class="legend">ATENÇÃO / ERRO</text>
+
+    <circle cx="672" cy="-5" r="7" fill="#22c55e"/>
+    <text x="688" y="0" class="legend">OCIOSA</text>
+
+    <circle cx="852" cy="-5" r="7" fill="#6b7280"/>
+    <text x="868" y="0" class="legend">OBSOLETA</text>
+  </g>
+</svg>

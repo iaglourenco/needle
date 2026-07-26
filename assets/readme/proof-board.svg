@@ -1,0 +1,65 @@
+<svg width="100%" viewBox="0 0 900 600" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Mockup fiel do painel da bandeja do Needle, com sessões em diferentes estados">
+  <title>Painel da bandeja do Needle com sessões em estados diferentes</title>
+  <defs>
+    <style>
+      .caption { font: 600 14px ui-monospace, SFMono-Regular, Consolas, monospace; fill: #7c828d; letter-spacing: 2px; }
+      .tab { font: 600 15px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      .project { font: 700 17px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #eef0f3; }
+      .state { font: 500 12px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #9096a1; }
+      .elapsed { font: 500 12px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #6b7280; }
+      .snippet { font: 400 13px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #7c828d; }
+      .row-line { stroke: #ffffff; stroke-opacity: 0.06; }
+    </style>
+  </defs>
+
+  <text x="80" y="26" class="caption">PAINEL DA BANDEJA — src/components/SessionList.vue</text>
+
+  <rect x="80" y="40" width="740" height="520" rx="18" fill="#12151b" stroke="#ffffff" stroke-opacity="0.08"/>
+
+  <!-- nav de abas -->
+  <text x="112" y="80" class="tab" fill="#eef0f3">Sessões</text>
+  <rect x="112" y="90" width="72" height="3" rx="1.5" fill="#3b82f6"/>
+  <text x="220" y="80" class="tab" fill="#6b7280">Configurações</text>
+  <line x1="80" y1="106" x2="820" y2="106" class="row-line"/>
+
+  <!-- linhas de sessão -->
+  <g>
+    <!-- 1: Running -->
+    <circle cx="128" cy="146" r="7" fill="#3b82f6"/>
+    <text x="150" y="152" class="project">needle</text>
+    <text x="248" y="152" class="state">RUNNING</text>
+    <text x="788" y="152" class="elapsed" text-anchor="end">12s</text>
+    <text x="150" y="174" class="snippet">Bash</text>
+    <line x1="112" y1="196" x2="788" y2="196" class="row-line"/>
+
+    <!-- 2: WaitingInput -->
+    <circle cx="128" cy="230" r="7" fill="#eab308"/>
+    <text x="150" y="236" class="project">billing-api</text>
+    <text x="278" y="236" class="state">WAITING INPUT</text>
+    <text x="788" y="236" class="elapsed" text-anchor="end">48s</text>
+    <text x="150" y="258" class="snippet">aguardando permissão pra rodar comando</text>
+    <line x1="112" y1="280" x2="788" y2="280" class="row-line"/>
+
+    <!-- 3: NeedsAttention -->
+    <circle cx="128" cy="314" r="7" fill="#ef4444"/>
+    <text x="150" y="320" class="project">billing-api</text>
+    <text x="278" y="320" class="state" fill="#ef4444">NEEDS ATTENTION</text>
+    <text x="788" y="320" class="elapsed" text-anchor="end">3min</text>
+    <text x="150" y="342" class="snippet">aguardando resposta há 3 minutos</text>
+    <line x1="112" y1="364" x2="788" y2="364" class="row-line"/>
+
+    <!-- 4: Idle -->
+    <circle cx="128" cy="398" r="7" fill="#22c55e"/>
+    <text x="150" y="404" class="project">docs-site</text>
+    <text x="248" y="404" class="state">IDLE</text>
+    <text x="788" y="404" class="elapsed" text-anchor="end">9min</text>
+    <text x="150" y="426" class="snippet">Stop</text>
+    <line x1="112" y1="448" x2="788" y2="448" class="row-line"/>
+
+    <!-- 5: Stale -->
+    <circle cx="128" cy="482" r="7" fill="#6b7280"/>
+    <text x="150" y="488" class="project" fill="#8a8f98">old-experiment</text>
+    <text x="298" y="488" class="state">STALE</text>
+    <text x="788" y="488" class="elapsed" text-anchor="end">41min</text>
+  </g>
+</svg>
