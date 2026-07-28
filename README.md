@@ -99,35 +99,6 @@ npm install
 npm run tauri dev     # development mode
 npm run tauri build   # generates NSIS installer at src-tauri/target/release/bundle/nsis
 ```
-
-Backend tests:
-
-```bash
-cd src-tauri && cargo test
-```
-
-Frontend type-check:
-
-```bash
-npx vue-tsc --noEmit
-```
-
-**Structure:**
-
-- `src-tauri/src/` — local HTTP server, SQLite, state machine, tray,
-  auto-hook setup, GUI-less `hook` mode, account usage + transcript cost
-  parsing.
-- `src/` — panel (Vue 3 + TS): session list, usage banner, settings screen.
-- `hook/README.md` — hook details and manual/per-project configuration.
-
-## Releases
-
-Pushing a tag matching `v*` (e.g. `v0.2.0`) triggers
-[`.github/workflows/release.yml`](.github/workflows/release.yml): it runs the
-backend tests and frontend type-check, then builds the NSIS installer and
-publishes it as a draft GitHub release via
-[`tauri-action`](https://github.com/tauri-apps/tauri-action).
-
 ## License
 
 [MIT](LICENSE)
