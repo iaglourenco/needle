@@ -2,12 +2,6 @@
   <img src="assets/readme/hero.svg" width="100%" alt="Needle — Claude Code session monitor in the tray, with color-coded status legend: running, waiting, attention/error, idle, obsolete" />
 </p>
 
-<p align="center">
-  <a href="../../releases"><img src="https://img.shields.io/badge/download-Windows%20installer-3b82f6?style=flat-square" alt="Download installer" /></a>
-  <img src="https://img.shields.io/badge/stack-Tauri%20%2B%20Vue%203%20%2B%20SQLite-12151b?style=flat-square" alt="Stack: Tauri, Vue 3, SQLite" />
-  <img src="https://img.shields.io/badge/license-MIT-6b7280?style=flat-square" alt="MIT license" />
-</p>
-
 When multiple Claude Code sessions run in parallel, the annoying question is
 always the same: **which one is waiting for my reply right now?** Needle lives
 in the Windows tray and answers that at a glance — no terminal switching.
@@ -60,12 +54,12 @@ updates tray + panel in real time.
 
 From the panel's "Settings" tab (or from the tray menu):
 
-| Option | What it does |
-| --- | --- |
-| "Needs attention" threshold | seconds waiting for input before status escalates |
-| "Obsolete" threshold | minutes without any event before the session disappears from the list |
-| Start with system | starts Needle with Windows |
-| Hook status | shows whether hooks are registered, with buttons to reconfigure or remove |
+| Option                      | What it does                                                              |
+| --------------------------- | ------------------------------------------------------------------------- |
+| "Needs attention" threshold | seconds waiting for input before status escalates                         |
+| "Obsolete" threshold        | minutes without any event before the session disappears from the list     |
+| Start with system           | starts Needle with Windows                                                |
+| Hook status                 | shows whether hooks are registered, with buttons to reconfigure or remove |
 
 ## Development
 

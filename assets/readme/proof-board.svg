@@ -12,7 +12,6 @@
     </style>
   </defs>
 
-  <text x="80" y="26" class="caption">TRAY PANEL — src/components/SessionList.vue</text>
 
   <rect x="80" y="40" width="740" height="520" rx="18" fill="#12151b" stroke="#ffffff" stroke-opacity="0.08"/>
 
