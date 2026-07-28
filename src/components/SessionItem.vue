@@ -2,6 +2,7 @@
 import { computed, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { api } from "../lib/api";
+import { projectNameOf } from "../lib/session";
 import { useNow } from "../composables/useNow";
 import type { Session } from "../lib/types";
 
@@ -30,10 +31,7 @@ const stateColor: Record<Session["state"], string> = {
   Ended: "#6b7280",
 };
 
-const projectName = computed(() => {
-  const parts = props.session.cwd.split(/[\\/]/).filter(Boolean);
-  return parts[parts.length - 1] ?? props.session.cwd;
-});
+const projectName = computed(() => projectNameOf(props.session.cwd));
 
 const elapsed = computed(() => {
   const seconds = Math.max(
