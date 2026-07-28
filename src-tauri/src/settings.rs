@@ -86,6 +86,19 @@ mod tests {
     }
 
     #[test]
+    fn language_serializes_with_the_exact_wire_tags() {
+        let json = serde_json::to_string(&Settings {
+            language: Language::En,
+            ..Default::default()
+        })
+        .unwrap();
+        assert!(json.contains(r#""language":"en""#), "{json}");
+
+        let json = serde_json::to_string(&Settings::default()).unwrap();
+        assert!(json.contains(r#""language":"pt-BR""#), "{json}");
+    }
+
+    #[test]
     fn missing_language_key_in_json_defaults_to_pt_br() {
         let dir = tempfile::tempdir().unwrap();
         std::fs::write(

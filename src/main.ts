@@ -6,8 +6,12 @@ import { i18n } from "./i18n";
 import { api } from "./lib/api";
 
 async function bootstrap() {
-  const settings = await api.getSettings();
-  i18n.global.locale.value = settings.language;
+  try {
+    const settings = await api.getSettings();
+    i18n.global.locale.value = settings.language;
+  } catch (err) {
+    console.error("failed to load settings, using default locale", err);
+  }
   createApp(App).use(createPinia()).use(i18n).mount("#app");
 }
 

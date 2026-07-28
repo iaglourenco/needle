@@ -13,6 +13,7 @@ const { t, locale } = useI18n();
 async function refresh() {
   settings.value = await api.getSettings();
   hookStatus.value = await api.getHookStatus();
+  if (settings.value) locale.value = settings.value.language;
 }
 
 onMounted(refresh);
