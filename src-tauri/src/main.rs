@@ -27,6 +27,14 @@ pub struct AppState {
     pub settings: Mutex<settings::Settings>,
     pub data_dir: PathBuf,
     pub app_handle: AppHandle,
+    pub tray_menu: TrayMenuItems,
+}
+
+pub struct TrayMenuItems {
+    pub open: MenuItem<tauri::Wry>,
+    pub settings: MenuItem<tauri::Wry>,
+    pub reconfigure: MenuItem<tauri::Wry>,
+    pub quit: MenuItem<tauri::Wry>,
 }
 
 fn needle_dir() -> PathBuf {
@@ -147,11 +155,57 @@ fn main() {
             let conn = db::open(&data_dir.join("needle.sqlite")).expect("falha abrindo SQLite");
             let loaded_settings = settings::load(&data_dir);
 
+            let open_item = MenuItem::with_id(
+                app,
+                "open",
+                i18n::menu_label(loaded_settings.language, "open"),
+                true,
+                None::<&str>,
+            )?;
+            let settings_item = MenuItem::with_id(
+                app,
+                "settings",
+                i18n::menu_label(loaded_settings.language, "settings"),
+                true,
+                None::<&str>,
+            )?;
+            let reconfigure_item = MenuItem::with_id(
+                app,
+                "reconfigure",
+                i18n::menu_label(loaded_settings.language, "reconfigure"),
+                true,
+                None::<&str>,
+            )?;
+            let separator = PredefinedMenuItem::separator(app)?;
+            let quit_item = MenuItem::with_id(
+                app,
+                "quit",
+                i18n::menu_label(loaded_settings.language, "quit"),
+                true,
+                None::<&str>,
+            )?;
+            let menu = Menu::with_items(
+                app,
+                &[
+                    &open_item,
+                    &settings_item,
+                    &reconfigure_item,
+                    &separator,
+                    &quit_item,
+                ],
+            )?;
+
             let app_state = Arc::new(AppState {
                 conn: Mutex::new(conn),
                 settings: Mutex::new(loaded_settings),
                 data_dir: data_dir.clone(),
                 app_handle: handle.clone(),
+                tray_menu: TrayMenuItems {
+                    open: open_item.clone(),
+                    settings: settings_item.clone(),
+                    reconfigure: reconfigure_item.clone(),
+                    quit: quit_item.clone(),
+                },
             });
             app.manage(app_state.clone());
 
@@ -184,40 +238,16 @@ fn main() {
                 match selfconfig::ensure_hooks_registered(&exe_path) {
                     Ok(true) => {
                         use tauri_plugin_notification::NotificationExt;
-                        let _ = handle
-                            .notification()
-                            .builder()
-                            .title("Needle configurado")
-                            .body("Hooks do Claude Code registrados automaticamente.")
-                            .show();
+                        let (title, body) =
+                            i18n::hooks_configured_notification(loaded_settings.language);
+                        let _ = handle.notification().builder().title(title).body(body).show();
                     }
                     Ok(false) => {}
                     Err(err) => eprintln!("falha ao auto-configurar hooks: {err}"),
                 }
             }
 
-            let open_item = MenuItem::with_id(app, "open", "Abrir Needle", true, None::<&str>)?;
-            let settings_item =
-                MenuItem::with_id(app, "settings", "Configurações", true, None::<&str>)?;
-            let reconfigure_item = MenuItem::with_id(
-                app,
-                "reconfigure",
-                "Reconfigurar hooks",
-                true,
-                None::<&str>,
-            )?;
-            let separator = PredefinedMenuItem::separator(app)?;
-            let quit_item = MenuItem::with_id(app, "quit", "Sair", true, None::<&str>)?;
-            let menu = Menu::with_items(
-                app,
-                &[
-                    &open_item,
-                    &settings_item,
-                    &reconfigure_item,
-                    &separator,
-                    &quit_item,
-                ],
-            )?;
+            let app_state_for_menu = app_state.clone();
 
             let window = app.get_webview_window("main").unwrap();
             let window_for_click = window.clone();
@@ -263,11 +293,12 @@ fn main() {
                                 let _ = selfconfig::ensure_hooks_registered(&exe_path);
                             }
                             use tauri_plugin_notification::NotificationExt;
+                            let lang = app_state_for_menu.settings.lock().unwrap().language;
                             let _ = handle_for_reconfigure
                                 .notification()
                                 .builder()
                                 .title("Needle")
-                                .body("Hooks reconfigurados.")
+                                .body(i18n::hooks_reconfigured_body(lang))
                                 .show();
                         }
                         _ => {}
@@ -326,8 +357,29 @@ fn save_settings(
     state: tauri::State<Arc<AppState>>,
     new_settings: settings::Settings,
 ) -> Result<(), String> {
+    let previous_language = state.settings.lock().unwrap().language;
     settings::save(&state.data_dir, &new_settings).map_err(|e| e.to_string())?;
     *state.settings.lock().unwrap() = new_settings;
+
+    if new_settings.language != previous_language {
+        let _ = state
+            .tray_menu
+            .open
+            .set_text(i18n::menu_label(new_settings.language, "open"));
+        let _ = state
+            .tray_menu
+            .settings
+            .set_text(i18n::menu_label(new_settings.language, "settings"));
+        let _ = state
+            .tray_menu
+            .reconfigure
+            .set_text(i18n::menu_label(new_settings.language, "reconfigure"));
+        let _ = state
+            .tray_menu
+            .quit
+            .set_text(i18n::menu_label(new_settings.language, "quit"));
+        tray::refresh_from_db(&state);
+    }
 
     let autolaunch = app.autolaunch();
     let result = if new_settings.autostart {
