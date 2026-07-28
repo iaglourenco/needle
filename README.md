@@ -13,8 +13,9 @@ in the Windows tray and answers that at a glance — no terminal switching.
 ## What it shows
 
 - All active sessions, grouped by project.
-- The state of each session, always one of these six: **running** · **waiting
-  for input** · **needs attention** · **idle** · **error** · **obsolete**.
+- The state of each session, always one of these seven: **running** ·
+  **waiting for input** · **needs attention** · **idle** · **error** ·
+  **obsolete** · **ended**.
 - Elapsed time since the last event, updating live — no need to reopen the
   panel to see it tick.
 - The Claude model used and the estimated cost (USD) of each session.
@@ -45,6 +46,14 @@ A session with no new event for a while is marked **obsolete**. Hover over
 one in the panel to reveal a delete button and remove it right away.
 Untouched, it's purged automatically after 24 hours with no activity — it
 won't sit there forever.
+
+## Ended sessions
+
+A session that finishes normally is marked **ended**, and — unlike obsolete
+sessions — it stays in the panel indefinitely; it's never auto-purged. Its
+cost keeps counting toward the total shown in the usage banner, so you still
+have a full record of what you spent. Hover over it to reveal the same
+delete button and remove it manually whenever you're done with it.
 
 ## Installation
 

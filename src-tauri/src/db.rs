@@ -246,5 +246,4 @@ mod tests {
         assert_eq!(sessions.len(), 1);
         assert_eq!(sessions[0].session_id, "s2");
     }
-
 }

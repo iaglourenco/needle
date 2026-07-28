@@ -28,6 +28,9 @@ const USAGE_CACHE_TTL_SECS: u64 = 60;
 /// Sessão obsoleta (Stale) sem nenhum evento novo por esse tempo é apagada
 /// de vez — não fica acumulando pra sempre esperando um SessionEnd que a
 /// ferramenta original pode nunca mandar (processo morto, terminal fechado).
+/// Sessões `Ended` ficam de fora dessa purga e são retidas indefinidamente
+/// (só saem por delete manual): `state::apply_stale_timeout` nunca transforma
+/// `Ended` em `Stale`, então o branch abaixo nunca as alcança.
 const STALE_PURGE_AFTER_SECS: i64 = 24 * 60 * 60;
 
 pub struct AppState {
@@ -457,10 +460,7 @@ async fn get_account_usage(
 fn delete_session(state: tauri::State<Arc<AppState>>, session_id: String) -> Result<bool, String> {
     let conn = state.conn.lock().unwrap();
     let current = db::get_session_state(&conn, &session_id).map_err(|e| e.to_string())?;
-    if !matches!(
-        current,
-        Some(state::SessionState::Stale) | Some(state::SessionState::Ended)
-    ) {
+    if !state::is_manually_deletable(current) {
         return Ok(false);
     }
     db::delete_session(&conn, &session_id).map_err(|e| e.to_string())?;

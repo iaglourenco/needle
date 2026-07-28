@@ -95,6 +95,12 @@ pub fn worst_state(states: impl IntoIterator<Item = SessionState>) -> Option<Ses
     states.into_iter().max_by_key(|s| s.severity())
 }
 
+/// Só sessões em estado terminal podem ser apagadas manualmente — evita
+/// que uma sessão ativa suma por engano.
+pub fn is_manually_deletable(current: Option<SessionState>) -> bool {
+    matches!(current, Some(SessionState::Stale) | Some(SessionState::Ended))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -199,6 +205,18 @@ mod tests {
             apply_stale_timeout(SessionState::Ended, 999_999, 1800),
             SessionState::Ended
         );
+    }
+
+    #[test]
+    fn only_stale_and_ended_are_manually_deletable() {
+        assert!(is_manually_deletable(Some(SessionState::Stale)));
+        assert!(is_manually_deletable(Some(SessionState::Ended)));
+        assert!(!is_manually_deletable(Some(SessionState::Running)));
+        assert!(!is_manually_deletable(Some(SessionState::WaitingInput)));
+        assert!(!is_manually_deletable(Some(SessionState::NeedsAttention)));
+        assert!(!is_manually_deletable(Some(SessionState::Idle)));
+        assert!(!is_manually_deletable(Some(SessionState::Error)));
+        assert!(!is_manually_deletable(None));
     }
 
     #[test]
