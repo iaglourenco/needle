@@ -3,6 +3,7 @@
 
 mod db;
 mod hookmode;
+mod i18n;
 mod selfconfig;
 mod server;
 mod settings;
