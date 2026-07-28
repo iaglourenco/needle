@@ -45,9 +45,6 @@ pub fn on_session_changed(
     if let Some(session) = sessions.iter().find(|s| s.session_id == session_id) {
         let _ = app_state.app_handle.emit("session-updated", session);
     }
-    if new_state == SessionState::Ended {
-        let _ = app_state.app_handle.emit("session-removed", session_id);
-    }
 
     if let Some(tray) = app_state
         .app_handle

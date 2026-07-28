@@ -124,7 +124,7 @@ pub fn insert_event(
 pub fn list_sessions(conn: &Connection) -> rusqlite::Result<Vec<SessionRow>> {
     let mut stmt = conn.prepare(
         "SELECT session_id, cwd, started_at, last_event_at, state, last_message_snippet, model, cost_usd
-         FROM sessions WHERE state != 'Ended' ORDER BY last_event_at DESC",
+         FROM sessions ORDER BY last_event_at DESC",
     )?;
     let rows = stmt
         .query_map([], |row| {
@@ -166,10 +166,6 @@ pub fn set_session_state(
         params![session_id, state_to_str(new_state)],
     )?;
     Ok(())
-}
-
-pub fn delete_ended_sessions(conn: &Connection) -> rusqlite::Result<usize> {
-    conn.execute("DELETE FROM sessions WHERE state = 'Ended'", [])
 }
 
 pub fn delete_session(conn: &Connection, session_id: &str) -> rusqlite::Result<usize> {
@@ -227,13 +223,14 @@ mod tests {
     }
 
     #[test]
-    fn list_sessions_excludes_ended() {
+    fn list_sessions_includes_ended() {
         let conn = setup();
         upsert_session(&conn, "s1", "/tmp/a", 100, SessionState::Running, None).unwrap();
-        upsert_session(&conn, "s2", "/tmp/b", 100, SessionState::Ended, None).unwrap();
+        upsert_session(&conn, "s2", "/tmp/b", 200, SessionState::Ended, None).unwrap();
         let sessions = list_sessions(&conn).unwrap();
-        assert_eq!(sessions.len(), 1);
-        assert_eq!(sessions[0].session_id, "s1");
+        assert_eq!(sessions.len(), 2);
+        assert_eq!(sessions[0].session_id, "s2");
+        assert_eq!(sessions[0].state, SessionState::Ended);
     }
 
     #[test]
@@ -250,16 +247,4 @@ mod tests {
         assert_eq!(sessions[0].session_id, "s2");
     }
 
-    #[test]
-    fn delete_ended_sessions_removes_only_ended() {
-        let conn = setup();
-        upsert_session(&conn, "s1", "/tmp/a", 100, SessionState::Running, None).unwrap();
-        upsert_session(&conn, "s2", "/tmp/b", 100, SessionState::Ended, None).unwrap();
-        let deleted = delete_ended_sessions(&conn).unwrap();
-        assert_eq!(deleted, 1);
-
-        let mut stmt = conn.prepare("SELECT COUNT(*) FROM sessions").unwrap();
-        let count: i64 = stmt.query_row([], |r| r.get(0)).unwrap();
-        assert_eq!(count, 1);
-    }
 }

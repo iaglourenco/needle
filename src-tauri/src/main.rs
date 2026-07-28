@@ -128,7 +128,6 @@ fn spawn_cleanup_job(app_state: Arc<AppState>) {
                     let _ = db::set_session_state(&conn, &session.session_id, after_stale);
                 }
             }
-            db::delete_ended_sessions(&conn).ok();
             drop(conn);
 
             tray::refresh_from_db(&app_state);
@@ -450,14 +449,18 @@ async fn get_account_usage(
     Ok(fresh)
 }
 
-/// Apaga uma sessão manualmente. Só permitido pra sessões já `Stale` — o
-/// botão de delete na UI só existe pra elas, e essa checagem no backend
-/// evita que uma sessão ativa suma por engano.
+/// Apaga uma sessão manualmente. Só permitido pra sessões em estado
+/// terminal (`Stale` ou `Ended`) — o botão de delete na UI só existe pra
+/// elas, e essa checagem no backend evita que uma sessão ativa suma por
+/// engano.
 #[tauri::command]
 fn delete_session(state: tauri::State<Arc<AppState>>, session_id: String) -> Result<bool, String> {
     let conn = state.conn.lock().unwrap();
     let current = db::get_session_state(&conn, &session_id).map_err(|e| e.to_string())?;
-    if current != Some(state::SessionState::Stale) {
+    if !matches!(
+        current,
+        Some(state::SessionState::Stale) | Some(state::SessionState::Ended)
+    ) {
         return Ok(false);
     }
     db::delete_session(&conn, &session_id).map_err(|e| e.to_string())?;
