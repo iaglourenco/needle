@@ -17,7 +17,7 @@
       "Stale": "Obsoleta",
       "Ended": "Encerrada"
     },
-    "delete": "Apagar sessão obsoleta"
+    "delete": "Apagar sessão"
   },
   "usage": {
     "fiveHour": "5h",

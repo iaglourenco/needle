@@ -70,7 +70,7 @@ const costLabel = computed(() => {
         <span v-if="costLabel" class="cost">{{ costLabel }}</span>
         <span class="elapsed">{{ elapsed }}</span>
         <button
-          v-if="session.state === 'Stale'"
+          v-if="session.state === 'Stale' || session.state === 'Ended'"
           type="button"
           class="delete-btn"
           :disabled="deleting"

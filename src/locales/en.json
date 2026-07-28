@@ -17,7 +17,7 @@
       "Stale": "Stale",
       "Ended": "Ended"
     },
-    "delete": "Delete stale session"
+    "delete": "Delete session"
   },
   "usage": {
     "fiveHour": "5h",
