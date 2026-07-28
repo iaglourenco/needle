@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
 import { listen } from "@tauri-apps/api/event";
+import { useI18n } from "vue-i18n";
 import SessionList from "./components/SessionList.vue";
 import SettingsView from "./components/SettingsView.vue";
 
 type View = "sessions" | "settings";
 
 const view = ref<View>("sessions");
+const { t } = useI18n();
 
 onMounted(() => {
   listen<View>("show-view", (event) => {
@@ -19,10 +21,10 @@ onMounted(() => {
   <div class="app">
     <nav>
       <button :class="{ active: view === 'sessions' }" @click="view = 'sessions'">
-        Sessões
+        {{ t("nav.sessions") }}
       </button>
       <button :class="{ active: view === 'settings' }" @click="view = 'settings'">
-        Configurações
+        {{ t("nav.settings") }}
       </button>
     </nav>
     <SessionList v-if="view === 'sessions'" />
