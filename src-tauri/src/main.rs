@@ -9,11 +9,14 @@ mod server;
 mod settings;
 mod state;
 mod tray;
+mod transcript;
+mod usage;
 
 use rusqlite::Connection;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
+use std::time::Instant;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, WebviewWindow, WindowEvent};
@@ -21,6 +24,7 @@ use tauri_plugin_autostart::ManagerExt;
 
 const DEFAULT_PORT: u16 = 47812;
 const CLEANUP_INTERVAL_SECS: u64 = 60;
+const USAGE_CACHE_TTL_SECS: u64 = 60;
 
 pub struct AppState {
     pub conn: Mutex<Connection>,
@@ -28,6 +32,7 @@ pub struct AppState {
     pub data_dir: PathBuf,
     pub app_handle: AppHandle,
     pub tray_menu: TrayMenuItems,
+    pub usage_cache: Mutex<Option<(Instant, usage::AccountUsage)>>,
 }
 
 pub struct TrayMenuItems {
@@ -206,6 +211,7 @@ fn main() {
                     reconfigure: reconfigure_item.clone(),
                     quit: quit_item.clone(),
                 },
+                usage_cache: Mutex::new(None),
             });
             app.manage(app_state.clone());
 
@@ -335,6 +341,7 @@ fn main() {
             get_hook_status,
             reconfigure_hooks,
             remove_hooks_command,
+            get_account_usage,
         ])
         .run(tauri::generate_context!())
         .expect("erro ao rodar app Needle");
@@ -407,4 +414,22 @@ fn reconfigure_hooks() -> Result<bool, String> {
 #[tauri::command]
 fn remove_hooks_command() -> Result<bool, String> {
     selfconfig::remove_hooks().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn get_account_usage(
+    state: tauri::State<'_, Arc<AppState>>,
+) -> Result<usage::AccountUsage, String> {
+    {
+        let cache = state.usage_cache.lock().unwrap();
+        if let Some((fetched_at, cached)) = cache.as_ref() {
+            if fetched_at.elapsed().as_secs() < USAGE_CACHE_TTL_SECS {
+                return Ok(cached.clone());
+            }
+        }
+    }
+
+    let fresh = usage::fetch_account_usage().await?;
+    *state.usage_cache.lock().unwrap() = Some((Instant::now(), fresh.clone()));
+    Ok(fresh)
 }

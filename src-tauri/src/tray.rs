@@ -6,6 +6,7 @@ use crate::db;
 use crate::i18n;
 use crate::settings::Language;
 use crate::state::{worst_state, SessionState};
+use crate::transcript;
 use crate::AppState;
 
 pub const TRAY_ID: &str = "main-tray";
@@ -27,7 +28,15 @@ pub fn on_session_changed(
     new_state: SessionState,
 ) {
     let conn = app_state.conn.lock().unwrap();
-    let sessions = db::list_sessions(&conn).unwrap_or_default();
+    let mut sessions = db::list_sessions(&conn).unwrap_or_default();
+
+    if let Some(session) = sessions.iter_mut().find(|s| s.session_id == session_id) {
+        if let Some(usage) = transcript::read_session_usage(&session.cwd, session_id) {
+            let _ = db::set_session_usage(&conn, session_id, &usage.model, usage.cost_usd);
+            session.model = Some(usage.model);
+            session.cost_usd = Some(usage.cost_usd);
+        }
+    }
     drop(conn);
     let lang = app_state.settings.lock().unwrap().language;
 

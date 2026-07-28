@@ -15,6 +15,13 @@
       "Ended": "Encerrada"
     }
   },
+  "usage": {
+    "fiveHour": "5h",
+    "weekly": "Semanal",
+    "cost": "Custo",
+    "resets": "reseta {time}",
+    "unavailable": "Dados de uso indisponíveis"
+  },
   "settings": {
     "hooksTitle": "Hooks do Claude Code",
     "hooksRegistered": "Registrados",

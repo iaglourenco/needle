@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { HookStatus, Session, Settings } from "./types";
+import type { AccountUsage, HookStatus, Session, Settings } from "./types";
 
 export const api = {
   listSessions: () => invoke<Session[]>("list_sessions"),
@@ -9,4 +9,5 @@ export const api = {
   getHookStatus: () => invoke<HookStatus>("get_hook_status"),
   reconfigureHooks: () => invoke<boolean>("reconfigure_hooks"),
   removeHooks: () => invoke<boolean>("remove_hooks_command"),
+  getAccountUsage: () => invoke<AccountUsage>("get_account_usage"),
 };

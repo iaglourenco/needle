@@ -14,6 +14,18 @@ export interface Session {
   last_event_at: number;
   state: SessionState;
   last_message_snippet: string | null;
+  model: string | null;
+  cost_usd: number | null;
+}
+
+export interface WindowUsage {
+  utilization: number;
+  resetsAt: string | null;
+}
+
+export interface AccountUsage {
+  fiveHour: WindowUsage | null;
+  sevenDay: WindowUsage | null;
 }
 
 export interface Settings {

@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { useI18n } from "vue-i18n";
+import { useNow } from "../composables/useNow";
 import type { Session } from "../lib/types";
 
 const props = defineProps<{ session: Session }>();
 const { t } = useI18n();
+const now = useNow();
 
 const stateColor: Record<Session["state"], string> = {
   Running: "#3b82f6",
@@ -24,12 +26,23 @@ const projectName = computed(() => {
 const elapsed = computed(() => {
   const seconds = Math.max(
     0,
-    Math.floor(Date.now() / 1000 - props.session.last_event_at),
+    Math.floor(now.value / 1000 - props.session.last_event_at),
   );
   if (seconds < 60) return `${seconds}s`;
   const minutes = Math.floor(seconds / 60);
   if (minutes < 60) return `${minutes}min`;
   return `${Math.floor(minutes / 60)}h`;
+});
+
+const modelLabel = computed(() => {
+  const model = props.session.model;
+  return model ? model.replace(/^claude-/, "") : null;
+});
+
+const costLabel = computed(() => {
+  const cost = props.session.cost_usd;
+  if (!cost) return null;
+  return `$${cost.toFixed(2)}`;
 });
 </script>
 
@@ -43,6 +56,8 @@ const elapsed = computed(() => {
       <div class="row">
         <span class="project">{{ projectName }}</span>
         <span class="state">{{ t(`sessions.states.${session.state}`) }}</span>
+        <span v-if="modelLabel" class="model">{{ modelLabel }}</span>
+        <span v-if="costLabel" class="cost">{{ costLabel }}</span>
         <span class="elapsed">{{ elapsed }}</span>
       </div>
       <div v-if="session.last_message_snippet" class="snippet">
@@ -82,6 +97,17 @@ const elapsed = computed(() => {
 .state {
   font-size: 0.75rem;
   opacity: 0.7;
+}
+.model {
+  font-size: 0.7rem;
+  opacity: 0.6;
+  padding: 0.05rem 0.35rem;
+  border: 1px solid currentColor;
+  border-radius: 0.75rem;
+}
+.cost {
+  font-size: 0.7rem;
+  opacity: 0.6;
 }
 .elapsed {
   font-size: 0.75rem;

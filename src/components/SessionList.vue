@@ -3,6 +3,7 @@ import { computed, onMounted } from "vue";
 import { useI18n } from "vue-i18n";
 import { useSessionsStore } from "../stores/sessions";
 import SessionItem from "./SessionItem.vue";
+import UsageBanner from "./UsageBanner.vue";
 
 const store = useSessionsStore();
 const { t } = useI18n();
@@ -21,6 +22,7 @@ const sorted = computed(() =>
     <header>
       <h1>Needle</h1>
     </header>
+    <UsageBanner />
     <ul v-if="sorted.length">
       <SessionItem
         v-for="session in sorted"

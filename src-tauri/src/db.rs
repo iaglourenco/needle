@@ -14,7 +14,9 @@ pub fn open(path: &Path) -> rusqlite::Result<Connection> {
             started_at INTEGER NOT NULL,
             last_event_at INTEGER NOT NULL,
             state TEXT NOT NULL,
-            last_message_snippet TEXT
+            last_message_snippet TEXT,
+            model TEXT,
+            cost_usd REAL
         );
         CREATE TABLE IF NOT EXISTS events (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -26,6 +28,11 @@ pub fn open(path: &Path) -> rusqlite::Result<Connection> {
         CREATE INDEX IF NOT EXISTS idx_events_session ON events(session_id);
         ",
     )?;
+    // Bancos criados antes das colunas model/cost_usd existirem não as
+    // ganham pelo CREATE TABLE IF NOT EXISTS acima — adiciona explicitamente,
+    // ignorando o erro esperado quando a coluna já existe.
+    let _ = conn.execute("ALTER TABLE sessions ADD COLUMN model TEXT", []);
+    let _ = conn.execute("ALTER TABLE sessions ADD COLUMN cost_usd REAL", []);
     Ok(conn)
 }
 
@@ -37,6 +44,8 @@ pub struct SessionRow {
     pub last_event_at: i64,
     pub state: SessionState,
     pub last_message_snippet: Option<String>,
+    pub model: Option<String>,
+    pub cost_usd: Option<f64>,
 }
 
 fn state_to_str(state: SessionState) -> &'static str {
@@ -114,7 +123,7 @@ pub fn insert_event(
 
 pub fn list_sessions(conn: &Connection) -> rusqlite::Result<Vec<SessionRow>> {
     let mut stmt = conn.prepare(
-        "SELECT session_id, cwd, started_at, last_event_at, state, last_message_snippet
+        "SELECT session_id, cwd, started_at, last_event_at, state, last_message_snippet, model, cost_usd
          FROM sessions WHERE state != 'Ended' ORDER BY last_event_at DESC",
     )?;
     let rows = stmt
@@ -126,10 +135,25 @@ pub fn list_sessions(conn: &Connection) -> rusqlite::Result<Vec<SessionRow>> {
                 last_event_at: row.get(3)?,
                 state: state_from_str(&row.get::<_, String>(4)?),
                 last_message_snippet: row.get(5)?,
+                model: row.get(6)?,
+                cost_usd: row.get(7)?,
             })
         })?
         .collect::<Result<Vec<_>, _>>()?;
     Ok(rows)
+}
+
+pub fn set_session_usage(
+    conn: &Connection,
+    session_id: &str,
+    model: &str,
+    cost_usd: f64,
+) -> rusqlite::Result<()> {
+    conn.execute(
+        "UPDATE sessions SET model = ?2, cost_usd = ?3 WHERE session_id = ?1",
+        params![session_id, model, cost_usd],
+    )?;
+    Ok(())
 }
 
 pub fn set_session_state(
