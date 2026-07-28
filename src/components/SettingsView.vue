@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
+import { useI18n } from "vue-i18n";
 import { api } from "../lib/api";
 import type { HookStatus, Settings } from "../lib/types";
 
@@ -7,6 +8,7 @@ const settings = ref<Settings | null>(null);
 const hookStatus = ref<HookStatus | null>(null);
 const savedFlash = ref(false);
 const busy = ref(false);
+const { t, locale } = useI18n();
 
 async function refresh() {
   settings.value = await api.getSettings();
@@ -51,23 +53,23 @@ async function removeHooks() {
 <template>
   <div v-if="settings" class="settings">
     <section>
-      <h2>Hooks do Claude Code</h2>
+      <h2>{{ t("settings.hooksTitle") }}</h2>
       <p class="status" :class="{ ok: hookStatus?.registered }">
-        {{ hookStatus?.registered ? "Registrados" : "Não registrados" }}
+        {{ hookStatus?.registered ? t("settings.hooksRegistered") : t("settings.hooksNotRegistered") }}
       </p>
       <p class="path">{{ hookStatus?.settings_path }}</p>
       <div class="actions">
-        <button :disabled="busy" @click="reconfigure">Reconfigurar</button>
+        <button :disabled="busy" @click="reconfigure">{{ t("settings.reconfigure") }}</button>
         <button :disabled="busy" class="danger" @click="removeHooks">
-          Remover
+          {{ t("settings.remove") }}
         </button>
       </div>
     </section>
 
     <section>
-      <h2>Limiares de estado</h2>
+      <h2>{{ t("settings.thresholdsTitle") }}</h2>
       <label>
-        Aguardando input → precisa de atenção após (segundos)
+        {{ t("settings.waitingTimeoutLabel") }}
         <input
           v-model.number="settings.waitingTimeoutSecs"
           type="number"
@@ -75,7 +77,7 @@ async function removeHooks() {
         />
       </label>
       <label>
-        Sessão inativa vira obsoleta após (minutos)
+        {{ t("settings.staleTimeoutLabel") }}
         <input
           :value="Math.round(settings.staleTimeoutSecs / 60)"
           type="number"
@@ -89,16 +91,23 @@ async function removeHooks() {
     </section>
 
     <section>
-      <h2>Geral</h2>
+      <h2>{{ t("settings.generalTitle") }}</h2>
       <label class="checkbox">
         <input v-model="settings.autostart" type="checkbox" />
-        Iniciar com o sistema
+        {{ t("settings.autostart") }}
+      </label>
+      <label>
+        {{ t("settings.language") }}
+        <select v-model="settings.language" @change="locale = settings.language">
+          <option value="pt-BR">Português (Brasil)</option>
+          <option value="en">English</option>
+        </select>
       </label>
     </section>
 
     <div class="footer">
-      <button :disabled="busy" class="primary" @click="save">Salvar</button>
-      <span v-if="savedFlash" class="saved">Salvo</span>
+      <button :disabled="busy" class="primary" @click="save">{{ t("settings.save") }}</button>
+      <span v-if="savedFlash" class="saved">{{ t("settings.saved") }}</span>
     </div>
   </div>
 </template>
@@ -132,6 +141,11 @@ label.checkbox {
   gap: 0.4rem;
 }
 input[type="number"] {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.3rem;
+}
+select {
   width: 100%;
   box-sizing: border-box;
   padding: 0.3rem;
