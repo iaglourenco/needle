@@ -25,6 +25,10 @@ use tauri_plugin_autostart::ManagerExt;
 const DEFAULT_PORT: u16 = 47812;
 const CLEANUP_INTERVAL_SECS: u64 = 60;
 const USAGE_CACHE_TTL_SECS: u64 = 60;
+/// Sessão obsoleta (Stale) sem nenhum evento novo por esse tempo é apagada
+/// de vez — não fica acumulando pra sempre esperando um SessionEnd que a
+/// ferramenta original pode nunca mandar (processo morto, terminal fechado).
+const STALE_PURGE_AFTER_SECS: i64 = 24 * 60 * 60;
 
 pub struct AppState {
     pub conn: Mutex<Connection>,
@@ -109,6 +113,17 @@ fn spawn_cleanup_job(app_state: Arc<AppState>) {
                     state::apply_waiting_timeout(session.state, seconds_since, waiting_timeout);
                 let after_stale =
                     state::apply_stale_timeout(after_waiting, seconds_since, stale_timeout);
+
+                if after_stale == state::SessionState::Stale
+                    && seconds_since > STALE_PURGE_AFTER_SECS
+                {
+                    let _ = db::delete_session(&conn, &session.session_id);
+                    let _ = app_state
+                        .app_handle
+                        .emit("session-removed", &session.session_id);
+                    continue;
+                }
+
                 if after_stale != session.state {
                     let _ = db::set_session_state(&conn, &session.session_id, after_stale);
                 }
@@ -342,6 +357,7 @@ fn main() {
             reconfigure_hooks,
             remove_hooks_command,
             get_account_usage,
+            delete_session,
         ])
         .run(tauri::generate_context!())
         .expect("erro ao rodar app Needle");
@@ -432,4 +448,20 @@ async fn get_account_usage(
     let fresh = usage::fetch_account_usage().await?;
     *state.usage_cache.lock().unwrap() = Some((Instant::now(), fresh.clone()));
     Ok(fresh)
+}
+
+/// Apaga uma sessão manualmente. Só permitido pra sessões já `Stale` — o
+/// botão de delete na UI só existe pra elas, e essa checagem no backend
+/// evita que uma sessão ativa suma por engano.
+#[tauri::command]
+fn delete_session(state: tauri::State<Arc<AppState>>, session_id: String) -> Result<bool, String> {
+    let conn = state.conn.lock().unwrap();
+    let current = db::get_session_state(&conn, &session_id).map_err(|e| e.to_string())?;
+    if current != Some(state::SessionState::Stale) {
+        return Ok(false);
+    }
+    db::delete_session(&conn, &session_id).map_err(|e| e.to_string())?;
+    drop(conn);
+    let _ = state.app_handle.emit("session-removed", &session_id);
+    Ok(true)
 }

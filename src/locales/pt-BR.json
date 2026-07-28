@@ -13,7 +13,8 @@
       "Error": "Erro",
       "Stale": "Obsoleta",
       "Ended": "Encerrada"
-    }
+    },
+    "delete": "Apagar sessão obsoleta"
   },
   "usage": {
     "fiveHour": "5h",

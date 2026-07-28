@@ -13,7 +13,8 @@
       "Error": "Error",
       "Stale": "Stale",
       "Ended": "Ended"
-    }
+    },
+    "delete": "Delete stale session"
   },
   "usage": {
     "fiveHour": "5h",

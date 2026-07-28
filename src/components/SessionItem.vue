@@ -1,12 +1,24 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import { useI18n } from "vue-i18n";
+import { api } from "../lib/api";
 import { useNow } from "../composables/useNow";
 import type { Session } from "../lib/types";
 
 const props = defineProps<{ session: Session }>();
 const { t } = useI18n();
 const now = useNow();
+const deleting = ref(false);
+
+async function onDelete() {
+  if (deleting.value) return;
+  deleting.value = true;
+  try {
+    await api.deleteSession(props.session.session_id);
+  } finally {
+    deleting.value = false;
+  }
+}
 
 const stateColor: Record<Session["state"], string> = {
   Running: "#3b82f6",
@@ -59,6 +71,26 @@ const costLabel = computed(() => {
         <span v-if="modelLabel" class="model">{{ modelLabel }}</span>
         <span v-if="costLabel" class="cost">{{ costLabel }}</span>
         <span class="elapsed">{{ elapsed }}</span>
+        <button
+          v-if="session.state === 'Stale'"
+          type="button"
+          class="delete-btn"
+          :disabled="deleting"
+          :title="t('sessions.delete')"
+          :aria-label="t('sessions.delete')"
+          @click="onDelete"
+        >
+          <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true">
+            <path
+              d="M4 4.5h8M6.5 4.5v-1a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v1M6 7v4M10 7v4M4.5 4.5l.6 8a1 1 0 0 0 1 .9h3.8a1 1 0 0 0 1-.9l.6-8"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </button>
       </div>
       <div v-if="session.last_message_snippet" class="snippet">
         {{ session.last_message_snippet }}
@@ -113,6 +145,34 @@ const costLabel = computed(() => {
   font-size: 0.75rem;
   opacity: 0.5;
   margin-left: auto;
+}
+.delete-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.15rem;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+.session-item:hover .delete-btn {
+  opacity: 0.55;
+  pointer-events: auto;
+}
+.delete-btn:hover {
+  opacity: 1;
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.12);
+}
+.delete-btn:disabled {
+  opacity: 0.25;
+  cursor: default;
+  pointer-events: none;
 }
 .snippet {
   font-size: 0.8rem;

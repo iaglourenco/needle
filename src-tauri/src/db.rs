@@ -172,6 +172,13 @@ pub fn delete_ended_sessions(conn: &Connection) -> rusqlite::Result<usize> {
     conn.execute("DELETE FROM sessions WHERE state = 'Ended'", [])
 }
 
+pub fn delete_session(conn: &Connection, session_id: &str) -> rusqlite::Result<usize> {
+    conn.execute(
+        "DELETE FROM sessions WHERE session_id = ?1",
+        params![session_id],
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -227,6 +234,20 @@ mod tests {
         let sessions = list_sessions(&conn).unwrap();
         assert_eq!(sessions.len(), 1);
         assert_eq!(sessions[0].session_id, "s1");
+    }
+
+    #[test]
+    fn delete_session_removes_the_given_session_only() {
+        let conn = setup();
+        upsert_session(&conn, "s1", "/tmp/a", 100, SessionState::Stale, None).unwrap();
+        upsert_session(&conn, "s2", "/tmp/b", 100, SessionState::Running, None).unwrap();
+
+        let deleted = delete_session(&conn, "s1").unwrap();
+        assert_eq!(deleted, 1);
+
+        let sessions = list_sessions(&conn).unwrap();
+        assert_eq!(sessions.len(), 1);
+        assert_eq!(sessions[0].session_id, "s2");
     }
 
     #[test]

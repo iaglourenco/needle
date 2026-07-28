@@ -10,4 +10,6 @@ export const api = {
   reconfigureHooks: () => invoke<boolean>("reconfigure_hooks"),
   removeHooks: () => invoke<boolean>("remove_hooks_command"),
   getAccountUsage: () => invoke<AccountUsage>("get_account_usage"),
+  deleteSession: (sessionId: string) =>
+    invoke<boolean>("delete_session", { sessionId }),
 };
