@@ -20,6 +20,7 @@ export interface Settings {
   waitingTimeoutSecs: number;
   staleTimeoutSecs: number;
   autostart: boolean;
+  language: "pt-BR" | "en";
 }
 
 export interface HookStatus {
