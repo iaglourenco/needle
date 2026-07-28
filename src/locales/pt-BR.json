@@ -5,6 +5,9 @@
   },
   "sessions": {
     "empty": "Nenhuma sessão ativa.",
+    "noMatch": "Nenhuma sessão corresponde à busca.",
+    "search": "Buscar sessões",
+    "searchPlaceholder": "Buscar por projeto...",
     "states": {
       "Running": "Em execução",
       "WaitingInput": "Aguardando input",
