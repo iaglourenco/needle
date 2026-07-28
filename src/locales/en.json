@@ -1,0 +1,33 @@
+{
+  "nav": {
+    "sessions": "Sessions",
+    "settings": "Settings"
+  },
+  "sessions": {
+    "empty": "No active sessions.",
+    "states": {
+      "Running": "Running",
+      "WaitingInput": "Waiting for input",
+      "NeedsAttention": "Needs attention",
+      "Idle": "Idle",
+      "Error": "Error",
+      "Stale": "Stale",
+      "Ended": "Ended"
+    }
+  },
+  "settings": {
+    "hooksTitle": "Claude Code Hooks",
+    "hooksRegistered": "Registered",
+    "hooksNotRegistered": "Not registered",
+    "reconfigure": "Reconfigure",
+    "remove": "Remove",
+    "thresholdsTitle": "State thresholds",
+    "waitingTimeoutLabel": "Waiting for input → needs attention after (seconds)",
+    "staleTimeoutLabel": "Idle session becomes stale after (minutes)",
+    "generalTitle": "General",
+    "autostart": "Start with the system",
+    "language": "Application language",
+    "save": "Save",
+    "saved": "Saved"
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "nav": {
+    "sessions": "Sessões",
+    "settings": "Configurações"
+  },
+  "sessions": {
+    "empty": "Nenhuma sessão ativa.",
+    "states": {
+      "Running": "Em execução",
+      "WaitingInput": "Aguardando input",
+      "NeedsAttention": "Precisa de atenção",
+      "Idle": "Ociosa",
+      "Error": "Erro",
+      "Stale": "Obsoleta",
+      "Ended": "Encerrada"
+    }
+  },
+  "settings": {
+    "hooksTitle": "Hooks do Claude Code",
+    "hooksRegistered": "Registrados",
+    "hooksNotRegistered": "Não registrados",
+    "reconfigure": "Reconfigurar",
+    "remove": "Remover",
+    "thresholdsTitle": "Limiares de estado",
+    "waitingTimeoutLabel": "Aguardando input → precisa de atenção após (segundos)",
+    "staleTimeoutLabel": "Sessão inativa vira obsoleta após (minutos)",
+    "generalTitle": "Geral",
+    "autostart": "Iniciar com o sistema",
+    "language": "Idioma da aplicação",
+    "save": "Salvar",
+    "saved": "Salvo"
+  }
+}
