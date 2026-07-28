@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed } from "vue";
+import { useI18n } from "vue-i18n";
 import type { Session } from "../lib/types";
 
 const props = defineProps<{ session: Session }>();
+const { t } = useI18n();
 
 const stateColor: Record<Session["state"], string> = {
   Running: "#3b82f6",
@@ -40,7 +42,7 @@ const elapsed = computed(() => {
     <div class="info">
       <div class="row">
         <span class="project">{{ projectName }}</span>
-        <span class="state">{{ session.state }}</span>
+        <span class="state">{{ t(`sessions.states.${session.state}`) }}</span>
         <span class="elapsed">{{ elapsed }}</span>
       </div>
       <div v-if="session.last_message_snippet" class="snippet">

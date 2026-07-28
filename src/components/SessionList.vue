@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted } from "vue";
+import { useI18n } from "vue-i18n";
 import { useSessionsStore } from "../stores/sessions";
 import SessionItem from "./SessionItem.vue";
 
 const store = useSessionsStore();
+const { t } = useI18n();
 
 onMounted(() => {
   if (!store.ready) store.init();
@@ -26,7 +28,7 @@ const sorted = computed(() =>
         :session="session"
       />
     </ul>
-    <p v-else class="empty">Nenhuma sessão ativa.</p>
+    <p v-else class="empty">{{ t("sessions.empty") }}</p>
   </div>
 </template>
 
