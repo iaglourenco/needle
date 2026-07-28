@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { useSessionsStore } from "../stores/sessions";
-import { projectNameOf } from "../lib/session";
 import SessionItem from "./SessionItem.vue";
 import UsageBanner from "./UsageBanner.vue";
 
@@ -15,6 +14,14 @@ const searchInput = ref<HTMLInputElement | null>(null);
 
 onMounted(() => {
   if (!store.ready) store.init();
+  // Painel é hide-on-blur (não fecha, só esconde — ver main.rs), então o
+  // componente nunca desmonta ao clicar fora; zeramos a busca manualmente
+  // para não persistir a query entre reaberturas do painel.
+  window.addEventListener("blur", closeSearch);
+});
+
+onUnmounted(() => {
+  window.removeEventListener("blur", closeSearch);
 });
 
 const sorted = computed(() =>
@@ -24,11 +31,7 @@ const sorted = computed(() =>
 const filtered = computed(() => {
   const q = searchQuery.value.trim().toLowerCase();
   if (!q) return sorted.value;
-  return sorted.value.filter(
-    (s) =>
-      projectNameOf(s.cwd).toLowerCase().includes(q) ||
-      s.cwd.toLowerCase().includes(q),
-  );
+  return sorted.value.filter((s) => s.cwd.toLowerCase().includes(q));
 });
 
 async function toggleSearch() {
