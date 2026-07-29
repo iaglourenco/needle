@@ -194,6 +194,26 @@ mod tests {
             SessionState::Running,
             SessionState::Idle
         ));
+        assert!(should_send_notification(
+            true,
+            SessionState::Running,
+            SessionState::NeedsAttention
+        ));
+        assert!(should_send_notification(
+            true,
+            SessionState::Running,
+            SessionState::Error
+        ));
+        assert!(!should_send_notification(
+            true,
+            SessionState::Running,
+            SessionState::Stale
+        ));
+        assert!(!should_send_notification(
+            true,
+            SessionState::Running,
+            SessionState::Ended
+        ));
     }
 
     #[test]

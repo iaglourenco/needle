@@ -73,6 +73,7 @@ mod tests {
         assert_eq!(settings.stale_timeout_secs, 1800);
         assert!(!settings.autostart);
         assert_eq!(settings.language, Language::PtBr);
+        assert!(settings.notifications_enabled);
     }
 
     #[test]
