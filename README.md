@@ -19,8 +19,9 @@ in the Windows tray and answers that at a glance — no terminal switching.
 - Elapsed time since the last event, updating live — no need to reopen the
   panel to see it tick.
 - The Claude model used and the estimated cost (USD) of each session.
-- Native Windows notification as soon as a session starts needing you (can be
-  turned off in Settings).
+- Native Windows notification as soon as a session starts needing you — if
+  you turn native notifications off in Settings, Needle switches to a small
+  in-app toast near the tray instead, it never goes fully silent.
 - Tray icon reflecting the worst state among all open sessions — if the icon
   turns red, you already know something is pending.
 
@@ -96,7 +97,7 @@ From the panel's "Settings" tab (or from the tray menu):
 | "Needs attention" threshold | seconds waiting for input before status escalates                         |
 | "Obsolete" threshold        | minutes without any event before the session is marked obsolete           |
 | Start with system           | starts Needle with Windows                                                |
-| Windows notifications       | toggles native OS notifications when a session needs attention            |
+| Windows notifications       | switches alerts between native OS notifications and an in-app toast near the tray |
 | Hook status                 | shows whether hooks are registered, with buttons to reconfigure or remove |
 
 ## Development

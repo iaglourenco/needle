@@ -16,7 +16,7 @@ onMounted(() => {
   listen<ToastPayload>("toast-show", (event) => {
     title.value = event.payload.title;
     body.value = event.payload.body;
-  });
+  }).catch(console.error);
 });
 
 async function onClick() {

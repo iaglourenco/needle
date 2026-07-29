@@ -20,12 +20,16 @@ struct ToastPayload<'a> {
 /// novo sempre reposiciona a janela, reemite o conteúdo e reagenda o
 /// auto-hide, nunca empilha com um toast anterior ainda visível.
 pub fn show(app_state: &Arc<AppState>, title: &str, body: &str) {
-    let pos = *app_state.last_tray_pos.lock().unwrap();
+    let pos = app_state
+        .last_tray_pos
+        .lock()
+        .unwrap()
+        .unwrap_or_else(|| crate::fallback_tray_pos(&app_state.app_handle));
     crate::position_near_tray(&app_state.toast_window, pos);
 
     let _ = app_state
         .toast_window
-        .emit("toast-show", ToastPayload { title, body });
+        .emit_to("toast", "toast-show", ToastPayload { title, body });
     let _ = app_state.toast_window.show();
 
     let generation = {
@@ -37,7 +41,8 @@ pub fn show(app_state: &Arc<AppState>, title: &str, body: &str) {
     let app_state = app_state.clone();
     tauri::async_runtime::spawn(async move {
         tokio::time::sleep(std::time::Duration::from_secs(VISIBLE_SECS)).await;
-        if *app_state.toast_generation.lock().unwrap() == generation {
+        let is_current = *app_state.toast_generation.lock().unwrap() == generation;
+        if is_current {
             let _ = app_state.toast_window.hide();
         }
     });

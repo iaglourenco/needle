@@ -43,8 +43,10 @@ pub struct AppState {
     pub toast_window: WebviewWindow,
     /// Última posição conhecida do ícone da bandeja — itens de menu e o
     /// toast (que não recebem coordenadas de clique) usam isso pra se
-    /// posicionar colados nela.
-    pub last_tray_pos: Mutex<PhysicalPosition<f64>>,
+    /// posicionar colados nela. `None` até o primeiro clique/hover na
+    /// bandeja (ex.: logo depois do app abrir) — nesse caso quem lê usa
+    /// `fallback_tray_pos` em vez de posicionar no canto (0,0) da tela.
+    pub last_tray_pos: Mutex<Option<PhysicalPosition<f64>>>,
     /// Contador monotônico: incrementado a cada toast mostrado, evita que
     /// o timer de auto-hide de um toast antigo esconda um toast mais novo.
     pub toast_generation: Mutex<u64>,
@@ -104,6 +106,23 @@ fn show_near_tray(window: &WebviewWindow, click_pos: PhysicalPosition<f64>) {
     position_near_tray(window, click_pos);
     let _ = window.show();
     let _ = window.set_focus();
+}
+
+/// Posição de fallback quando `last_tray_pos` ainda é `None` (nenhum clique
+/// ou hover na bandeja ainda aconteceu, ex.: logo após o app abrir): o canto
+/// inferior direito do monitor primário, de onde `position_near_tray` já
+/// subtrai o tamanho da janela e a margem — resultado é um popover colado
+/// nesse canto, convenção usual de toast/tray no Windows.
+pub(crate) fn fallback_tray_pos(app_handle: &AppHandle) -> PhysicalPosition<f64> {
+    app_handle
+        .primary_monitor()
+        .ok()
+        .flatten()
+        .map(|monitor| {
+            let size = monitor.size();
+            PhysicalPosition::new(size.width as f64, size.height as f64)
+        })
+        .unwrap_or(PhysicalPosition::new(0.0, 0.0))
 }
 
 fn spawn_cleanup_job(app_state: Arc<AppState>) {
@@ -248,8 +267,8 @@ fn main() {
                 data_dir: data_dir.clone(),
                 app_handle: handle.clone(),
                 main_window: window.clone(),
-                toast_window: toast_window.clone(),
-                last_tray_pos: Mutex::new(PhysicalPosition::new(0.0, 0.0)),
+                toast_window,
+                last_tray_pos: Mutex::new(None),
                 toast_generation: Mutex::new(0),
                 tray_menu: TrayMenuItems {
                     open: open_item.clone(),
@@ -322,7 +341,11 @@ fn main() {
                 .menu(&menu)
                 .tooltip("Needle")
                 .on_menu_event(move |app, event| {
-                    let pos = *app_state_for_menu.last_tray_pos.lock().unwrap();
+                    let pos = app_state_for_menu
+                        .last_tray_pos
+                        .lock()
+                        .unwrap()
+                        .unwrap_or_else(|| fallback_tray_pos(app));
                     match event.id.as_ref() {
                         "quit" => app.exit(0),
                         "open" => {
@@ -362,11 +385,11 @@ fn main() {
                         position,
                         ..
                     } => {
-                        *app_state_for_tray_events.last_tray_pos.lock().unwrap() = position;
+                        *app_state_for_tray_events.last_tray_pos.lock().unwrap() = Some(position);
                         show_near_tray(&window_for_click, position);
                     }
                     TrayIconEvent::Enter { position, .. } => {
-                        *app_state_for_tray_events.last_tray_pos.lock().unwrap() = position;
+                        *app_state_for_tray_events.last_tray_pos.lock().unwrap() = Some(position);
                     }
                     _ => {}
                 })
@@ -500,7 +523,11 @@ fn delete_session(state: tauri::State<Arc<AppState>>, session_id: String) -> Res
 /// ícone da bandeja.
 #[tauri::command]
 fn open_panel_from_toast(state: tauri::State<Arc<AppState>>) {
-    let pos = *state.last_tray_pos.lock().unwrap();
+    let pos = state
+        .last_tray_pos
+        .lock()
+        .unwrap()
+        .unwrap_or_else(|| fallback_tray_pos(&state.app_handle));
     show_near_tray(&state.main_window, pos);
     let _ = state.main_window.emit("show-view", "sessions");
 }
