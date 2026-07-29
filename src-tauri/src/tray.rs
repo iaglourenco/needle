@@ -203,4 +203,37 @@ mod tests {
         let corner = idx(0, 0);
         assert_eq!(rgba[corner + 3], 0, "corner pixel should be transparent");
     }
+
+    #[test]
+    fn dot_icon_is_symmetric_with_correct_extent() {
+        let icon = dot_icon((0x3b, 0x82, 0xf6));
+        let rgba = icon.rgba();
+        let idx = |x: u32, y: u32| ((y * 32 + x) * 4) as usize;
+        let filled = |x: u32, y: u32| rgba[idx(x, y) + 3] == 255;
+
+        // 4-fold symmetry catches an off-center circle
+        for (x, y) in [(1u32, 15u32), (30, 15), (15, 1), (15, 30)] {
+            assert!(filled(x, y), "({x},{y}) should be inside the disc");
+        }
+        // 1px transparent margin catches a too-large radius
+        for (x, y) in [(0u32, 15u32), (31, 15), (15, 0), (15, 31)] {
+            assert!(!filled(x, y), "({x},{y}) should be outside the disc");
+        }
+    }
+
+    #[test]
+    fn icon_color_for_matches_severity_gate() {
+        use SessionState::*;
+        for s in [
+            Running,
+            WaitingInput,
+            NeedsAttention,
+            Idle,
+            Error,
+            Stale,
+            Ended,
+        ] {
+            assert_eq!(icon_color_for(s).is_some(), s.severity() > 0, "{s:?}");
+        }
+    }
 }

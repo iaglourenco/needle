@@ -21,6 +21,8 @@ async function onDelete() {
   }
 }
 
+// Tray icon (src-tauri/src/tray.rs, icon_color_for) uses this same palette
+// — update both together.
 const stateColor: Record<Session["state"], string> = {
   Running: "#3b82f6",
   WaitingInput: "#eab308",

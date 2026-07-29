@@ -349,6 +349,8 @@ fn main() {
                 })
                 .build(app)?;
 
+            tray::refresh_from_db(&app_state);
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

@@ -81,8 +81,11 @@ versionado.
 Sem mudança de schema, sem asset novo pra empacotar no instalador. Se
 `app_state.app_handle.default_window_icon()` retornar `None` (não deveria
 acontecer — o ícone padrão vem do `tauri.conf.json`), `tray.set_icon`
-recebe `None`, que no Tauri 2 mantém o ícone atual em vez de zerar —
-comportamento aceitável como fallback de borda.
+recebe `None`, que no backend de bandeja do Windows na verdade **zera** o
+ícone (`NIM_MODIFY` com handle nulo), não mantém o atual — mas isso é
+inofensivo na prática: `default_window_icon()` já é `.unwrap()`ado em
+outro ponto do `main.rs`, então o app teria travado no startup bem antes
+desse código rodar, se esse `None` fosse sequer possível.
 
 ## Testes
 
