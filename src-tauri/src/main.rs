@@ -38,6 +38,15 @@ pub struct AppState {
     pub settings: Mutex<settings::Settings>,
     pub data_dir: PathBuf,
     pub app_handle: AppHandle,
+    pub main_window: WebviewWindow,
+    pub toast_window: WebviewWindow,
+    /// Última posição conhecida do ícone da bandeja — itens de menu e o
+    /// toast (que não recebem coordenadas de clique) usam isso pra se
+    /// posicionar colados nela.
+    pub last_tray_pos: Mutex<PhysicalPosition<f64>>,
+    /// Contador monotônico: incrementado a cada toast mostrado, evita que
+    /// o timer de auto-hide de um toast antigo esconda um toast mais novo.
+    pub toast_generation: Mutex<u64>,
     pub tray_menu: TrayMenuItems,
     pub usage_cache: Mutex<Option<(Instant, usage::AccountUsage)>>,
 }
@@ -81,7 +90,7 @@ fn write_port_file(port: u16) {
 /// Posiciona a janela colada no ícone da bandeja (assumindo o padrão mais
 /// comum no Windows: barra de tarefas embaixo, área de notificação à
 /// direita) em vez de deixar o SO centralizar a janela na tela.
-fn position_near_tray(window: &WebviewWindow, click_pos: PhysicalPosition<f64>) {
+pub(crate) fn position_near_tray(window: &WebviewWindow, click_pos: PhysicalPosition<f64>) {
     if let Ok(size) = window.outer_size() {
         const MARGIN: f64 = 8.0;
         let x = (click_pos.x - size.width as f64).max(0.0);
@@ -229,11 +238,18 @@ fn main() {
                 ],
             )?;
 
+            let window = app.get_webview_window("main").unwrap();
+            let toast_window = app.get_webview_window("toast").unwrap();
+
             let app_state = Arc::new(AppState {
                 conn: Mutex::new(conn),
                 settings: Mutex::new(loaded_settings),
                 data_dir: data_dir.clone(),
                 app_handle: handle.clone(),
+                main_window: window.clone(),
+                toast_window: toast_window.clone(),
+                last_tray_pos: Mutex::new(PhysicalPosition::new(0.0, 0.0)),
+                toast_generation: Mutex::new(0),
                 tray_menu: TrayMenuItems {
                     open: open_item.clone(),
                     settings: settings_item.clone(),
@@ -283,19 +299,13 @@ fn main() {
             }
 
             let app_state_for_menu = app_state.clone();
+            let app_state_for_tray_events = app_state.clone();
 
-            let window = app.get_webview_window("main").unwrap();
             let window_for_click = window.clone();
             let window_for_open = window.clone();
             let window_for_settings = window.clone();
             let window_for_blur = window.clone();
             let handle_for_reconfigure = handle.clone();
-
-            // Guarda a última posição conhecida do ícone da bandeja, pra
-            // itens de menu (que não recebem coordenadas de clique) também
-            // conseguirem abrir a janela colada nela.
-            let last_tray_pos = Arc::new(Mutex::new(PhysicalPosition::new(0.0, 0.0)));
-            let last_tray_pos_for_event = last_tray_pos.clone();
 
             // Fecha a janela quando ela perde o foco, como um popover normal
             // de bandeja — evita a sensação de janela "perdida" no meio da
@@ -311,7 +321,7 @@ fn main() {
                 .menu(&menu)
                 .tooltip("Needle")
                 .on_menu_event(move |app, event| {
-                    let pos = *last_tray_pos.lock().unwrap();
+                    let pos = *app_state_for_menu.last_tray_pos.lock().unwrap();
                     match event.id.as_ref() {
                         "quit" => app.exit(0),
                         "open" => {
@@ -351,11 +361,11 @@ fn main() {
                         position,
                         ..
                     } => {
-                        *last_tray_pos_for_event.lock().unwrap() = position;
+                        *app_state_for_tray_events.last_tray_pos.lock().unwrap() = position;
                         show_near_tray(&window_for_click, position);
                     }
                     TrayIconEvent::Enter { position, .. } => {
-                        *last_tray_pos_for_event.lock().unwrap() = position;
+                        *app_state_for_tray_events.last_tray_pos.lock().unwrap() = position;
                     }
                     _ => {}
                 })
@@ -374,6 +384,7 @@ fn main() {
             remove_hooks_command,
             get_account_usage,
             delete_session,
+            open_panel_from_toast,
         ])
         .run(tauri::generate_context!())
         .expect("erro ao rodar app Needle");
@@ -481,4 +492,14 @@ fn delete_session(state: tauri::State<Arc<AppState>>, session_id: String) -> Res
     drop(conn);
     let _ = state.app_handle.emit("session-removed", &session_id);
     Ok(true)
+}
+
+/// Chamado ao clicar no toast in-app: abre o painel principal colado na
+/// bandeja e muda pra aba Sessões — mesmo comportamento de clicar no
+/// ícone da bandeja.
+#[tauri::command]
+fn open_panel_from_toast(state: tauri::State<Arc<AppState>>) {
+    let pos = *state.last_tray_pos.lock().unwrap();
+    show_near_tray(&state.main_window, pos);
+    let _ = state.main_window.emit("show-view", "sessions");
 }

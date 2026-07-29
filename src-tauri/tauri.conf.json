@@ -23,6 +23,19 @@
         "alwaysOnTop": true,
         "shadow": true,
         "center": false
+      },
+      {
+        "label": "toast",
+        "title": "Needle",
+        "width": 320,
+        "height": 84,
+        "visible": false,
+        "decorations": false,
+        "resizable": false,
+        "skipTaskbar": true,
+        "alwaysOnTop": true,
+        "shadow": true,
+        "center": false
       }
     ],
     "security": {
