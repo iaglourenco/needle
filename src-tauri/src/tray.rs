@@ -85,7 +85,12 @@ fn should_send_notification(
     enabled && previous_state != new_state && should_notify(new_state)
 }
 
-fn notify_if_needed(
+/// `pub(crate)`: além de `on_session_changed`, o job de limpeza periódica
+/// (`main.rs::spawn_cleanup_job`) também chama isso diretamente — é o
+/// único lugar que promove sessão pra `NeedsAttention` (via
+/// `apply_waiting_timeout`), transição que nenhum hook do Claude Code gera
+/// sozinho.
+pub(crate) fn notify_if_needed(
     app_state: &AppState,
     session_id: &str,
     sessions: &[db::SessionRow],

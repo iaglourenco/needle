@@ -103,9 +103,13 @@ fn spawn_cleanup_job(app_state: Arc<AppState>) {
         loop {
             interval.tick().await;
             let now = chrono::Utc::now().timestamp();
-            let (waiting_timeout, stale_timeout) = {
+            let (waiting_timeout, stale_timeout, lang) = {
                 let settings = app_state.settings.lock().unwrap();
-                (settings.waiting_timeout_secs, settings.stale_timeout_secs)
+                (
+                    settings.waiting_timeout_secs,
+                    settings.stale_timeout_secs,
+                    settings.language,
+                )
             };
 
             let conn = app_state.conn.lock().unwrap();
@@ -129,6 +133,14 @@ fn spawn_cleanup_job(app_state: Arc<AppState>) {
 
                 if after_stale != session.state {
                     let _ = db::set_session_state(&conn, &session.session_id, after_stale);
+                    tray::notify_if_needed(
+                        &app_state,
+                        &session.session_id,
+                        &sessions,
+                        session.state,
+                        after_stale,
+                        lang,
+                    );
                 }
             }
             drop(conn);
