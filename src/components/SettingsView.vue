@@ -97,6 +97,10 @@ async function removeHooks() {
         <input v-model="settings.autostart" type="checkbox" />
         {{ t("settings.autostart") }}
       </label>
+      <label class="checkbox">
+        <input v-model="settings.notificationsEnabled" type="checkbox" />
+        {{ t("settings.notificationsEnabled") }}
+      </label>
       <label>
         {{ t("settings.language") }}
         <select v-model="settings.language" @change="locale = settings.language">

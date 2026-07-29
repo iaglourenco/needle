@@ -37,6 +37,7 @@
     "staleTimeoutLabel": "Sessão inativa vira obsoleta após (minutos)",
     "generalTitle": "Geral",
     "autostart": "Iniciar com o sistema",
+    "notificationsEnabled": "Notificações do Windows",
     "language": "Idioma da aplicação",
     "save": "Salvar",
     "saved": "Salvo"

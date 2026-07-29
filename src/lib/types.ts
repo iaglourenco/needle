@@ -32,6 +32,7 @@ export interface Settings {
   waitingTimeoutSecs: number;
   staleTimeoutSecs: number;
   autostart: boolean;
+  notificationsEnabled: boolean;
   language: "pt-BR" | "en";
 }
 

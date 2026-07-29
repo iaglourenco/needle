@@ -37,6 +37,7 @@
     "staleTimeoutLabel": "Idle session becomes stale after (minutes)",
     "generalTitle": "General",
     "autostart": "Start with the system",
+    "notificationsEnabled": "Windows notifications",
     "language": "Application language",
     "save": "Save",
     "saved": "Saved"
