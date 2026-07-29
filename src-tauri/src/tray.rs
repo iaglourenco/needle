@@ -51,6 +51,7 @@ pub fn on_session_changed(
         .tray_by_id(&TrayIconId::new(TRAY_ID))
     {
         let _ = tray.set_tooltip(Some(i18n::tray_tooltip(lang, worst)));
+        let _ = tray.set_icon(icon_for_worst(app_state, worst));
     }
 
     notify_if_needed(app_state, session_id, &sessions, previous_state, new_state, lang);
@@ -67,6 +68,7 @@ pub fn refresh_from_db(app_state: &AppState) {
     let worst = worst_state(sessions.iter().map(|s| s.state));
     if let Some(tray) = app_state.app_handle.tray_by_id(&TrayIconId::new(TRAY_ID)) {
         let _ = tray.set_tooltip(Some(i18n::tray_tooltip(lang, worst)));
+        let _ = tray.set_icon(icon_for_worst(app_state, worst));
     }
     for session in &sessions {
         let _ = app_state.app_handle.emit("session-updated", session);
@@ -96,5 +98,109 @@ fn notify_if_needed(
             .title(title)
             .body(body)
             .show();
+    }
+}
+
+/// Cor do ponto na bandeja pro estado dado — mesma paleta usada em
+/// `SessionItem.vue` (`stateColor`). `None` pros estados terminais, que
+/// não acendem o ícone (ele volta pro logo padrão nesse caso).
+fn icon_color_for(state: SessionState) -> Option<(u8, u8, u8)> {
+    match state {
+        SessionState::Running => Some((0x3b, 0x82, 0xf6)),
+        SessionState::WaitingInput => Some((0xea, 0xb3, 0x08)),
+        SessionState::NeedsAttention | SessionState::Error => Some((0xef, 0x44, 0x44)),
+        SessionState::Idle => Some((0x22, 0xc5, 0x5e)),
+        SessionState::Stale | SessionState::Ended => None,
+    }
+}
+
+/// Desenha um círculo preenchido 32x32 sobre fundo transparente, usado
+/// como ícone da bandeja quando há sessão em estado que pede atenção.
+fn dot_icon(color: (u8, u8, u8)) -> tauri::image::Image<'static> {
+    const SIZE: u32 = 32;
+    let (r, g, b) = color;
+    let radius = SIZE as f32 / 2.0;
+    let center = radius - 0.5;
+    let mut rgba = vec![0u8; (SIZE * SIZE * 4) as usize];
+    for y in 0..SIZE {
+        for x in 0..SIZE {
+            let dx = x as f32 - center;
+            let dy = y as f32 - center;
+            let dist = (dx * dx + dy * dy).sqrt();
+            if dist <= radius - 1.0 {
+                let idx = ((y * SIZE + x) * 4) as usize;
+                rgba[idx] = r;
+                rgba[idx + 1] = g;
+                rgba[idx + 2] = b;
+                rgba[idx + 3] = 255;
+            }
+        }
+    }
+    tauri::image::Image::new_owned(rgba, SIZE, SIZE)
+}
+
+/// Ícone a exibir na bandeja pro pior estado agregado: círculo colorido
+/// se houver sessão com severidade > 0, senão volta pro logo padrão do
+/// Needle (sem sessão, ou só sessões `Stale`/`Ended`).
+fn icon_for_worst(
+    app_state: &AppState,
+    worst: Option<SessionState>,
+) -> Option<tauri::image::Image<'static>> {
+    match worst.and_then(icon_color_for) {
+        Some(color) => Some(dot_icon(color)),
+        None => app_state
+            .app_handle
+            .default_window_icon()
+            .map(|icon| icon.clone().to_owned()),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn icon_color_for_maps_each_severity_bearing_state() {
+        assert_eq!(
+            icon_color_for(SessionState::Running),
+            Some((0x3b, 0x82, 0xf6))
+        );
+        assert_eq!(
+            icon_color_for(SessionState::WaitingInput),
+            Some((0xea, 0xb3, 0x08))
+        );
+        assert_eq!(
+            icon_color_for(SessionState::NeedsAttention),
+            Some((0xef, 0x44, 0x44))
+        );
+        assert_eq!(icon_color_for(SessionState::Error), Some((0xef, 0x44, 0x44)));
+        assert_eq!(icon_color_for(SessionState::Idle), Some((0x22, 0xc5, 0x5e)));
+    }
+
+    #[test]
+    fn icon_color_for_terminal_states_is_none() {
+        assert_eq!(icon_color_for(SessionState::Stale), None);
+        assert_eq!(icon_color_for(SessionState::Ended), None);
+    }
+
+    #[test]
+    fn dot_icon_is_32x32_rgba() {
+        let icon = dot_icon((0x3b, 0x82, 0xf6));
+        assert_eq!(icon.width(), 32);
+        assert_eq!(icon.height(), 32);
+        assert_eq!(icon.rgba().len(), 32 * 32 * 4);
+    }
+
+    #[test]
+    fn dot_icon_paints_center_and_leaves_corners_transparent() {
+        let icon = dot_icon((0x3b, 0x82, 0xf6));
+        let rgba = icon.rgba();
+        let idx = |x: u32, y: u32| ((y * 32 + x) * 4) as usize;
+
+        let center = idx(16, 16);
+        assert_eq!(&rgba[center..center + 4], &[0x3b, 0x82, 0xf6, 255]);
+
+        let corner = idx(0, 0);
+        assert_eq!(rgba[corner + 3], 0, "corner pixel should be transparent");
     }
 }
