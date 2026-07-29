@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use tauri::tray::TrayIconId;
 use tauri::Emitter;
 use tauri_plugin_notification::NotificationExt;
@@ -22,7 +23,7 @@ fn should_notify(new_state: SessionState) -> bool {
 /// o tooltip da bandeja, emite o evento pro frontend e dispara notificação
 /// OS se a sessão acabou de entrar num estado que pede atenção.
 pub fn on_session_changed(
-    app_state: &AppState,
+    app_state: &Arc<AppState>,
     session_id: &str,
     previous_state: SessionState,
     new_state: SessionState,
@@ -54,7 +55,7 @@ pub fn on_session_changed(
         let _ = tray.set_icon(icon_for_worst(app_state, worst));
     }
 
-    notify_if_needed(app_state, session_id, &sessions, previous_state, new_state, lang);
+    alert_if_needed(app_state, session_id, &sessions, previous_state, new_state, lang);
 }
 
 /// Recalcula tooltip/badge a partir do banco, sem evento específico associado
@@ -75,31 +76,27 @@ pub fn refresh_from_db(app_state: &AppState) {
     }
 }
 
-/// Guarda pura: só notifica se o usuário não desligou notificações do SO
-/// (`Settings.notifications_enabled`) e a transição pede atenção.
-fn should_send_notification(
-    enabled: bool,
-    previous_state: SessionState,
-    new_state: SessionState,
-) -> bool {
-    enabled && previous_state != new_state && should_notify(new_state)
+/// Guarda pura: a transição pede atenção, independente de canal (nativo
+/// ou toast in-app — a escolha do canal é feita em `alert_if_needed`).
+fn should_alert(previous_state: SessionState, new_state: SessionState) -> bool {
+    previous_state != new_state && should_notify(new_state)
 }
 
 /// `pub(crate)`: além de `on_session_changed`, o job de limpeza periódica
 /// (`main.rs::spawn_cleanup_job`) também chama isso diretamente — é o
 /// único lugar que promove sessão pra `NeedsAttention` (via
 /// `apply_waiting_timeout`), transição que nenhum hook do Claude Code gera
-/// sozinho.
-pub(crate) fn notify_if_needed(
-    app_state: &AppState,
+/// sozinho. Escolhe o canal: notificação nativa do Windows se
+/// `Settings.notifications_enabled` estiver ligado, senão o toast in-app.
+pub(crate) fn alert_if_needed(
+    app_state: &Arc<AppState>,
     session_id: &str,
     sessions: &[db::SessionRow],
     previous_state: SessionState,
     new_state: SessionState,
     lang: Language,
 ) {
-    let enabled = app_state.settings.lock().unwrap().notifications_enabled;
-    if !should_send_notification(enabled, previous_state, new_state) {
+    if !should_alert(previous_state, new_state) {
         return;
     }
 
@@ -110,13 +107,18 @@ pub(crate) fn notify_if_needed(
         .map(|s| s.cwd.clone())
         .unwrap_or_default();
 
-    let _ = app_state
-        .app_handle
-        .notification()
-        .builder()
-        .title(title)
-        .body(body)
-        .show();
+    let native_enabled = app_state.settings.lock().unwrap().notifications_enabled;
+    if native_enabled {
+        let _ = app_state
+            .app_handle
+            .notification()
+            .builder()
+            .title(title)
+            .body(body)
+            .show();
+    } else {
+        crate::toast::show(app_state, title, &body);
+    }
 }
 
 /// Cor do ponto na bandeja pro estado dado — mesma paleta usada em
@@ -178,47 +180,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn should_send_notification_respects_enabled_flag_and_transition() {
-        assert!(should_send_notification(
-            true,
-            SessionState::Running,
-            SessionState::WaitingInput
-        ));
-        assert!(!should_send_notification(
-            false,
-            SessionState::Running,
-            SessionState::WaitingInput
-        ));
-        assert!(!should_send_notification(
-            true,
-            SessionState::WaitingInput,
-            SessionState::WaitingInput
-        ));
-        assert!(!should_send_notification(
-            true,
-            SessionState::Running,
-            SessionState::Idle
-        ));
-        assert!(should_send_notification(
-            true,
-            SessionState::Running,
-            SessionState::NeedsAttention
-        ));
-        assert!(should_send_notification(
-            true,
-            SessionState::Running,
-            SessionState::Error
-        ));
-        assert!(!should_send_notification(
-            true,
-            SessionState::Running,
-            SessionState::Stale
-        ));
-        assert!(!should_send_notification(
-            true,
-            SessionState::Running,
-            SessionState::Ended
-        ));
+    fn should_alert_respects_transition() {
+        assert!(should_alert(SessionState::Running, SessionState::WaitingInput));
+        assert!(!should_alert(SessionState::WaitingInput, SessionState::WaitingInput));
+        assert!(!should_alert(SessionState::Running, SessionState::Idle));
+        assert!(should_alert(SessionState::Running, SessionState::NeedsAttention));
+        assert!(should_alert(SessionState::Running, SessionState::Error));
+        assert!(!should_alert(SessionState::Running, SessionState::Stale));
+        assert!(!should_alert(SessionState::Running, SessionState::Ended));
     }
 
     #[test]

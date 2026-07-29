@@ -8,6 +8,7 @@ mod selfconfig;
 mod server;
 mod settings;
 mod state;
+mod toast;
 mod tray;
 mod transcript;
 mod usage;
@@ -142,7 +143,7 @@ fn spawn_cleanup_job(app_state: Arc<AppState>) {
 
                 if after_stale != session.state {
                     let _ = db::set_session_state(&conn, &session.session_id, after_stale);
-                    tray::notify_if_needed(
+                    tray::alert_if_needed(
                         &app_state,
                         &session.session_id,
                         &sessions,
