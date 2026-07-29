@@ -12,4 +12,5 @@ export const api = {
   getAccountUsage: () => invoke<AccountUsage>("get_account_usage"),
   deleteSession: (sessionId: string) =>
     invoke<boolean>("delete_session", { sessionId }),
+  openPanelFromToast: () => invoke<void>("open_panel_from_toast"),
 };
