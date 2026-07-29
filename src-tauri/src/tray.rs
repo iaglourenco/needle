@@ -75,6 +75,16 @@ pub fn refresh_from_db(app_state: &AppState) {
     }
 }
 
+/// Guarda pura: só notifica se o usuário não desligou notificações do SO
+/// (`Settings.notifications_enabled`) e a transição pede atenção.
+fn should_send_notification(
+    enabled: bool,
+    previous_state: SessionState,
+    new_state: SessionState,
+) -> bool {
+    enabled && previous_state != new_state && should_notify(new_state)
+}
+
 fn notify_if_needed(
     app_state: &AppState,
     session_id: &str,
@@ -83,22 +93,25 @@ fn notify_if_needed(
     new_state: SessionState,
     lang: Language,
 ) {
-    if previous_state != new_state && should_notify(new_state) {
-        let title = i18n::notif_title(lang, new_state);
-        let body = sessions
-            .iter()
-            .find(|s| s.session_id == session_id)
-            .map(|s| s.cwd.clone())
-            .unwrap_or_default();
-
-        let _ = app_state
-            .app_handle
-            .notification()
-            .builder()
-            .title(title)
-            .body(body)
-            .show();
+    let enabled = app_state.settings.lock().unwrap().notifications_enabled;
+    if !should_send_notification(enabled, previous_state, new_state) {
+        return;
     }
+
+    let title = i18n::notif_title(lang, new_state);
+    let body = sessions
+        .iter()
+        .find(|s| s.session_id == session_id)
+        .map(|s| s.cwd.clone())
+        .unwrap_or_default();
+
+    let _ = app_state
+        .app_handle
+        .notification()
+        .builder()
+        .title(title)
+        .body(body)
+        .show();
 }
 
 /// Cor do ponto na bandeja pro estado dado — mesma paleta usada em
@@ -158,6 +171,30 @@ fn icon_for_worst(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn should_send_notification_respects_enabled_flag_and_transition() {
+        assert!(should_send_notification(
+            true,
+            SessionState::Running,
+            SessionState::WaitingInput
+        ));
+        assert!(!should_send_notification(
+            false,
+            SessionState::Running,
+            SessionState::WaitingInput
+        ));
+        assert!(!should_send_notification(
+            true,
+            SessionState::WaitingInput,
+            SessionState::WaitingInput
+        ));
+        assert!(!should_send_notification(
+            true,
+            SessionState::Running,
+            SessionState::Idle
+        ));
+    }
 
     #[test]
     fn icon_color_for_maps_each_severity_bearing_state() {

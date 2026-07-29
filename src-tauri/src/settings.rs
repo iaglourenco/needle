@@ -15,6 +15,10 @@ impl Default for Language {
     }
 }
 
+fn default_notifications_enabled() -> bool {
+    true
+}
+
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Settings {
@@ -23,6 +27,8 @@ pub struct Settings {
     pub autostart: bool,
     #[serde(default)]
     pub language: Language,
+    #[serde(default = "default_notifications_enabled")]
+    pub notifications_enabled: bool,
 }
 
 impl Default for Settings {
@@ -32,6 +38,7 @@ impl Default for Settings {
             stale_timeout_secs: 30 * 60,
             autostart: false,
             language: Language::PtBr,
+            notifications_enabled: true,
         }
     }
 }
@@ -76,6 +83,7 @@ mod tests {
             stale_timeout_secs: 600,
             autostart: true,
             language: Language::En,
+            notifications_enabled: true,
         };
         save(dir.path(), &settings).unwrap();
         let loaded = load(dir.path());
@@ -108,5 +116,29 @@ mod tests {
         .unwrap();
         let settings = load(dir.path());
         assert_eq!(settings.language, Language::PtBr);
+    }
+
+    #[test]
+    fn notifications_enabled_defaults_to_true_when_missing() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            dir.path().join("settings.json"),
+            r#"{"waitingTimeoutSecs":60,"staleTimeoutSecs":1800,"autostart":false}"#,
+        )
+        .unwrap();
+        let settings = load(dir.path());
+        assert!(settings.notifications_enabled);
+    }
+
+    #[test]
+    fn notifications_enabled_roundtrips() {
+        let dir = tempfile::tempdir().unwrap();
+        let settings = Settings {
+            notifications_enabled: false,
+            ..Settings::default()
+        };
+        save(dir.path(), &settings).unwrap();
+        let loaded = load(dir.path());
+        assert!(!loaded.notifications_enabled);
     }
 }
